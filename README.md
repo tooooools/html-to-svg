@@ -13,6 +13,7 @@ This is a web-to-print oriented project, but will work as well for various SVG g
 ## Not supported
 
 - Native and local fonts
+- CSS `z-index`
 - CSS `transform: rotate()`
 - CSS `transform: skew()`
 
