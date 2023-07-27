@@ -14692,6 +14692,27 @@
     };
   });
 
+  /* global XMLSerializer, btoa */
+  var svg = (function (_ref) {
+    return function (element, _ref2) {
+      var x = _ref2.x,
+        y = _ref2.y,
+        width = _ref2.width,
+        height = _ref2.height;
+      try {
+        return Promise.resolve($('image', {
+          x: x,
+          y: y,
+          width: width,
+          height: height,
+          href: 'data:image/svg+xml;base64,' + btoa(new XMLSerializer().serializeToString(element))
+        }));
+      } catch (e) {
+        return Promise.reject(e);
+      }
+    };
+  });
+
   function _unsupportedIterableToArray(o, minLen) {
     if (!o) return;
     if (typeof o === "string") return _arrayLikeToArray(o, minLen);
@@ -14824,8 +14845,10 @@
     __proto__: null,
     div: div,
     text: text,
+    svg: svg,
     CANVAS: canvas,
-    IMG: image
+    IMG: image,
+    SVG: svg
   };
 
   /* global Node */

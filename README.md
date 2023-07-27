@@ -7,9 +7,8 @@
 
 ### Not supported
 
-- CSS `letter-spacing`
-- CSS `transform`
-
+- CSS `transform: rotate()`
+- CSS `transform: skew()`
 
 ### Gotchas 
 

@@ -62,7 +62,7 @@
         vertical-align: bottom;
       }
 
-      svg:hover .debug {
+      .result svg:hover .debug {
         display: none;
       }
 
@@ -115,11 +115,15 @@
       main footer {
         display: flex;
         justify-content: space-between;
-        align-items: flex-end;
+        align-items: center;
       }
 
       main footer .html-only {
         margin: var(--space);
+      }
+
+      main footer .icon {
+        height: 5rem;
       }
 
       [data-label] {
@@ -153,14 +157,15 @@
         <!-- TODO handle native fonts -->
         <code>@tooooools/html-to-svg</code>
       </header>
-      <!-- TODO implement SVG support -->
-      <div class='content' contenteditable>
-        <p class='ahem'>Lorem ipsum</p>
+      <div class='content' contenteditable spellcheck='false'>
         <p>Lorem ipsum dolor sit amet sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.</p>
         <p>Ut aliquip ex ea <i>commodo consequat</i>. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.</p>
       </div>
       <footer>
         <span class='html-only'>do not render me</span>
+        <svg class='icon' width='100%' height='100%' viewBox='0 0 116 100'>
+          <path d='M57.734,82.319C39.884,82.319 25.414,67.85 25.414,50C25.414,32.15 39.884,17.681 57.734,17.681C75.584,17.681 90.053,32.15 90.053,50C90.053,67.85 75.584,82.319 57.734,82.319M86.603,-0L28.867,-0L0,50L28.867,100L86.603,100L115.47,50L86.603,-0Z' style='fill:black;'/>
+        </svg>
         <img src='https://github.com/tooooools.png?size=100'>
       </footer>
     </main>
