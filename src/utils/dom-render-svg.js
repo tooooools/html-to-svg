@@ -3,7 +3,10 @@ export default function (name, props = {}, parent) {
 
   const element = document.createElementNS(NS, name)
   if (name === 'svg') element.setAttributeNS('http://www.w3.org/2000/xmlns/', 'xmlns', NS)
-  for (const key in props) element.setAttribute(key, props[key])
+  for (const key in props) {
+    if (props[key] === null || props[key] === undefined) continue
+    element.setAttribute(key, props[key])
+  }
 
   if (parent) parent.appendChild(element)
   return element

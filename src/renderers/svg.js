@@ -1,5 +1,5 @@
 /* global XMLSerializer, btoa */
-import $ from '../utils/render-svg'
+import $ from '../utils/dom-render-svg'
 
 export default ({
   CACHE,

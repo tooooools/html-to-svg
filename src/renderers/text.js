@@ -1,7 +1,7 @@
-import $ from '../utils/render-svg'
+import $ from '../utils/dom-render-svg'
 
 const matchFont = s => ({ family, style = 'normal', weight = '400' } = {}) =>
-  family === s.getPropertyValue('font-family') &&
+  family === (s.getPropertyValue('font-family') ?? '').replace(/['"]/g, '') &&
     style === (s.getPropertyValue('font-style') ?? 'normal') &&
     weight === (s.getPropertyValue('font-weight') ?? '400')
 
@@ -13,7 +13,7 @@ export default ({
   if (!element) return
   if (!element.textContent) return
 
-  const g = $('g', { class: 'text' })
+  const g = $('g')
 
   // Find font
   const font = fonts.find(matchFont(style))
@@ -47,7 +47,13 @@ export default ({
   } else {
     // Render text
     $('path', {
-      d: font.opentype.getPath(element.textContent, x, y + leading, fontSize).toPathData(3),
+      d: font.opentype.getPath(element.textContent, x, y + leading, fontSize, {
+        features: {
+          // TODO extract from CSS props
+          liga: true,
+          rlig: true
+        }
+      }).toPathData(3),
       fill: style.getPropertyValue('color')
     }, g)
   }

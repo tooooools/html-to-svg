@@ -1,14 +1,27 @@
-import $ from '../utils/render-svg'
+import $ from '../utils/dom-render-svg'
 
 export default ({
   CACHE,
   debug,
   fonts
-}) => async (element, { x, y, width, height, style }) => $('rect', {
-  x,
-  y,
-  width,
-  height,
-  fill: style.getPropertyValue('background-color'),
-  rx: style.getPropertyValue('border-radius')
-})
+}) => async (element, { x, y, width, height, style }) => {
+  if (!width || !height) return
+
+  const backgroundColor = style.getPropertyValue('background-color')
+
+  // Skip visually empty blocks
+  if (!backgroundColor || backgroundColor === 'none' || backgroundColor === 'transparent') return
+  if (backgroundColor.startsWith('rgba')) {
+    const rgba = backgroundColor.match(/[\d.]+/g)
+    if (rgba[3] === '0') return
+  }
+
+  return $('rect', {
+    x,
+    y,
+    width,
+    height,
+    fill: backgroundColor,
+    rx: parseInt(style.getPropertyValue('border-radius')) || null
+  })
+}

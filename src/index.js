@@ -1,8 +1,9 @@
 /* global Node */
 import Opentype from 'opentype.js'
 import walk from './utils/dom-walk'
-import $ from './utils/render-svg'
+import getClientRects from './utils/range-get-client-rects'
 
+import $ from './utils/dom-render-svg'
 import * as RENDERERS from './renderers'
 
 export default function (container = document.body, {
@@ -56,72 +57,52 @@ export default function (container = document.body, {
       }, svg)
 
       // Render every children
+      // TODO opacity
       await walk(container.children, async element => {
         if (ignore && element.matches(ignore)) return
 
+        const style = window.getComputedStyle(element)
         const { x, y, width, height } = element.getBoundingClientRect()
-        const opts = {
+
+        // Render element
+        const render = renderers[element.tagName] ?? renderers.div
+        const rendered = await render(element, {
           x: x - viewBox.x,
           y: y - viewBox.y,
           width,
           height,
-          style: window.getComputedStyle(element)
-        }
+          style
+        })
+        if (rendered) svg.appendChild(rendered)
 
-        // Render element
-        // TODO skip renderer if not is final and visually useless
-        const el = await (renderers[element.tagName] ?? renderers.div)(element, opts)
-        if (debug) el.setAttribute('data-tag', element.tagName)
-        if (el) svg.appendChild(el)
+        // DEBUG
+        // if (element.tagName === 'I') return
 
-        // Render text // TODO cleanup
-        const isFinal = !Array.from(element.children).find(child => window.getComputedStyle(child).getPropertyValue('display') !== 'inline')
-        if (isFinal) {
-          for (const node of element.childNodes) {
-            const range = document.createRange()
-            range.selectNodeContents(node)
+        // Render text nodes inside the element
+        for (const node of element.childNodes) {
+          if (node.nodeType !== Node.TEXT_NODE) continue
+          if (!node.textContent.trim().replace(/\s+/g, '').length) continue
 
-            let len = 0
-            for (const rect of range.getClientRects()) {
-              // WIP doc, test
-              let content
-              const brute = document.createRange()
-              brute.setStart(node, len)
-              // BUG Safari
-              while (len <= node.textContent.length && brute.getClientRects()[0]?.width < rect.width) {
-                brute.setEnd(node, len++)
-                content = brute.cloneContents()
-              }
+          for (const { rect, fragment } of getClientRects(node)) {
+            try {
+              // WIP
+              if (rect.x === x) fragment.textContent = fragment.textContent.trimStart()
 
-              if (debug) {
-                $('rect', {
-                  x: rect.x - viewBox.x,
-                  y: rect.y - viewBox.y,
-                  width: rect.width,
-                  height: rect.height,
-                  fill: 'rgb(0 0 0 / 10%)',
-                  class: 'debug'
-                }, svg)
-              }
-
-              try {
-                const text = await renderers.text(content, {
-                  x: rect.x - viewBox.x,
-                  y: rect.y - viewBox.y,
-                  width: rect.width,
-                  height: rect.height,
-                  style: node.nodeType === Node.ELEMENT_NODE
-                    ? window.getComputedStyle(node)
-                    : opts.style
-                })
-                if (text) svg.appendChild(text)
-              } catch (error) {
-                console.warn(new Error(`Rendering failed for the following text:\n'${content.textContent}'`, { cause: error }))
-              }
+              const text = await renderers.text(fragment, {
+                x: rect.x - viewBox.x,
+                y: rect.y - viewBox.y,
+                width: rect.width,
+                height: rect.height,
+                style
+              })
+              if (text) svg.appendChild(text)
+            } catch (error) {
+              console.warn(new Error(`Rendering failed for the following text:\n'${fragment.textContent}'`, { cause: error }))
             }
           }
         }
 
+        // Continue walking
         return true
       })
 

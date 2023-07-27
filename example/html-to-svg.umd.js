@@ -14445,8 +14445,6 @@
   	loadSync: loadSync
   });
 
-  function noop () {}
-
   var _iteratorSymbol$1 = typeof Symbol !== "undefined" ? Symbol.iterator || (Symbol.iterator = Symbol("Symbol.iterator")) : "@@iterator";
   function _settle$1(pact, state, value) {
     if (!pact.s) {
@@ -14542,9 +14540,6 @@
     return pact;
   }
   var walk = function walk(children, callback) {
-    if (callback === void 0) {
-      callback = noop;
-    }
     try {
       var _temp = _forOf$1(children, function (child) {
         return Promise.resolve(callback(child)).then(function (_callback) {
@@ -14618,6 +14613,31 @@
     }, check);
   }
 
+  /* global DocumentFragment */
+
+  // Return Range.clientRects with their corresponding DocumentFragment
+  function getClientRects (node) {
+    var range = document.createRange();
+    var rects = [];
+    for (var i = 0; i < node.textContent.length; i++) {
+      var _rects$index;
+      range.setStart(node, 0);
+      range.setEnd(node, i + 1);
+      var clientRects = range.getClientRects();
+      var index = clientRects.length - 1;
+      rects[index] = (_rects$index = rects[index]) != null ? _rects$index : {
+        text: ''
+      };
+      rects[index].rect = clientRects[index];
+      rects[index].text += node.textContent.charAt(i);
+    }
+    return rects.map(function (rect) {
+      rect.fragment = new DocumentFragment();
+      rect.fragment.textContent = rect.text;
+      return rect;
+    });
+  }
+
   function $ (name, props, parent) {
     if (props === void 0) {
       props = {};
@@ -14625,7 +14645,10 @@
     var NS = 'http://www.w3.org/2000/svg';
     var element = document.createElementNS(NS, name);
     if (name === 'svg') element.setAttributeNS('http://www.w3.org/2000/xmlns/', 'xmlns', NS);
-    for (var key in props) element.setAttribute(key, props[key]);
+    for (var key in props) {
+      if (props[key] === null || props[key] === undefined) continue;
+      element.setAttribute(key, props[key]);
+    }
     if (parent) parent.appendChild(element);
     return element;
   }
@@ -14658,13 +14681,22 @@
         height = _ref2.height,
         style = _ref2.style;
       try {
+        if (!width || !height) return Promise.resolve();
+        var backgroundColor = style.getPropertyValue('background-color');
+
+        // Skip visually empty blocks
+        if (!backgroundColor || backgroundColor === 'none' || backgroundColor === 'transparent') return Promise.resolve();
+        if (backgroundColor.startsWith('rgba')) {
+          var rgba = backgroundColor.match(/[\d.]+/g);
+          if (rgba[3] === '0') return Promise.resolve();
+        }
         return Promise.resolve($('rect', {
           x: x,
           y: y,
           width: width,
           height: height,
-          fill: style.getPropertyValue('background-color'),
-          rx: style.getPropertyValue('border-radius')
+          fill: backgroundColor,
+          rx: parseInt(style.getPropertyValue('border-radius')) || null
         }));
       } catch (e) {
         return Promise.reject(e);
@@ -14679,6 +14711,8 @@
         width = _ref2.width,
         height = _ref2.height;
       try {
+        if (!width || !height) return Promise.resolve();
+        if (!element.src) return Promise.resolve();
         return Promise.resolve($('image', {
           x: x,
           y: y,
@@ -14747,14 +14781,14 @@
 
   var matchFont = function matchFont(s) {
     return function (_temp) {
-      var _s$getPropertyValue, _s$getPropertyValue2;
+      var _s$getPropertyValue, _s$getPropertyValue2, _s$getPropertyValue3;
       var _ref = _temp === void 0 ? {} : _temp,
         family = _ref.family,
         _ref$style = _ref.style,
         style = _ref$style === void 0 ? 'normal' : _ref$style,
         _ref$weight = _ref.weight,
         weight = _ref$weight === void 0 ? '400' : _ref$weight;
-      return family === s.getPropertyValue('font-family') && style === ((_s$getPropertyValue = s.getPropertyValue('font-style')) != null ? _s$getPropertyValue : 'normal') && weight === ((_s$getPropertyValue2 = s.getPropertyValue('font-weight')) != null ? _s$getPropertyValue2 : '400');
+      return family === ((_s$getPropertyValue = s.getPropertyValue('font-family')) != null ? _s$getPropertyValue : '').replace(/['"]/g, '') && style === ((_s$getPropertyValue2 = s.getPropertyValue('font-style')) != null ? _s$getPropertyValue2 : 'normal') && weight === ((_s$getPropertyValue3 = s.getPropertyValue('font-weight')) != null ? _s$getPropertyValue3 : '400');
     };
   };
   var text = (function (_ref2) {
@@ -14786,9 +14820,7 @@
         };
         if (!element) return Promise.resolve();
         if (!element.textContent) return Promise.resolve();
-        var g = $('g', {
-          "class": 'text'
-        });
+        var g = $('g');
 
         // Find font
         var font = fonts.find(matchFont(style));
@@ -14830,7 +14862,13 @@
         } else {
           // Render text
           $('path', {
-            d: font.opentype.getPath(element.textContent, x, y + leading, fontSize).toPathData(3),
+            d: font.opentype.getPath(element.textContent, x, y + leading, fontSize, {
+              features: {
+                // TODO extract from CSS props
+                liga: true,
+                rlig: true
+              }
+            }).toPathData(3),
             fill: style.getPropertyValue('color')
           }, g);
         }
@@ -15085,81 +15123,61 @@
           }, svg);
 
           // Render every children
+          // TODO opacity
           return Promise.resolve(walk(container.children, function (element) {
             try {
               var _renderers$element$ta;
               if (ignore && element.matches(ignore)) return Promise.resolve();
+              var _style = window.getComputedStyle(element);
               var _element$getBoundingC = element.getBoundingClientRect(),
                 x = _element$getBoundingC.x,
                 y = _element$getBoundingC.y,
                 width = _element$getBoundingC.width,
                 height = _element$getBoundingC.height;
-              var opts = {
+
+              // Render element
+              var render = (_renderers$element$ta = renderers[element.tagName]) != null ? _renderers$element$ta : renderers.div;
+              return Promise.resolve(render(element, {
                 x: x - viewBox.x,
                 y: y - viewBox.y,
                 width: width,
                 height: height,
-                style: window.getComputedStyle(element)
-              };
+                style: _style
+              })).then(function (rendered) {
+                if (rendered) svg.appendChild(rendered);
 
-              // Render element
-              // TODO skip renderer if not is final and visually useless
-              return Promise.resolve(((_renderers$element$ta = renderers[element.tagName]) != null ? _renderers$element$ta : renderers.div)(element, opts)).then(function (el) {
-                if (debug) el.setAttribute('data-tag', element.tagName);
-                if (el) svg.appendChild(el);
+                // DEBUG
+                // if (element.tagName === 'I') return
 
-                // Render text // TODO cleanup
-                var isFinal = !Array.from(element.children).find(function (child) {
-                  return window.getComputedStyle(child).getPropertyValue('display') !== 'inline';
-                });
-                var _temp4 = function () {
-                  if (isFinal) {
-                    return _forOf(element.childNodes, function (node) {
-                      var range = document.createRange();
-                      range.selectNodeContents(node);
-                      var len = 0;
-                      return _forOf(range.getClientRects(), function (rect) {
-                        // WIP doc, test
-                        var content;
-                        var brute = document.createRange();
-                        brute.setStart(node, len);
-                        // BUG Safari
-                        while (len <= node.textContent.length && ((_brute$getClientRects = brute.getClientRects()[0]) == null ? void 0 : _brute$getClientRects.width) < rect.width) {
-                          var _brute$getClientRects;
-                          brute.setEnd(node, len++);
-                          content = brute.cloneContents();
-                        }
-                        if (debug) {
-                          $('rect', {
-                            x: rect.x - viewBox.x,
-                            y: rect.y - viewBox.y,
-                            width: rect.width,
-                            height: rect.height,
-                            fill: 'rgb(0 0 0 / 10%)',
-                            "class": 'debug'
-                          }, svg);
-                        }
-                        var _temp3 = _catch(function () {
-                          return Promise.resolve(renderers.text(content, {
-                            x: rect.x - viewBox.x,
-                            y: rect.y - viewBox.y,
-                            width: rect.width,
-                            height: rect.height,
-                            style: node.nodeType === Node.ELEMENT_NODE ? window.getComputedStyle(node) : opts.style
-                          })).then(function (text) {
-                            if (text) svg.appendChild(text);
-                          });
-                        }, function (error) {
-                          console.warn(new Error("Rendering failed for the following text:\n'" + content.textContent + "'", {
-                            cause: error
-                          }));
-                        });
-                        if (_temp3 && _temp3.then) return _temp3.then(function () {});
+                // Render text nodes inside the element
+                var _temp4 = _forOf(element.childNodes, function (node) {
+                  if (node.nodeType !== Node.TEXT_NODE) return;
+                  if (!node.textContent.trim().replace(/\s+/g, '').length) return;
+                  return _forOf(getClientRects(node), function (_ref2) {
+                    var rect = _ref2.rect,
+                      fragment = _ref2.fragment;
+                    var _temp3 = _catch(function () {
+                      // WIP
+                      if (rect.x === x) fragment.textContent = fragment.textContent.trimStart();
+                      return Promise.resolve(renderers.text(fragment, {
+                        x: rect.x - viewBox.x,
+                        y: rect.y - viewBox.y,
+                        width: rect.width,
+                        height: rect.height,
+                        style: _style
+                      })).then(function (text) {
+                        if (text) svg.appendChild(text);
                       });
+                    }, function (error) {
+                      console.warn(new Error("Rendering failed for the following text:\n'" + fragment.textContent + "'", {
+                        cause: error
+                      }));
                     });
-                  }
-                }();
+                    if (_temp3 && _temp3.then) return _temp3.then(function () {});
+                  });
+                });
                 return _temp4 && _temp4.then ? _temp4.then(function () {
+                  // Continue walking
                   return true;
                 }) : true;
               });
