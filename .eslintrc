@@ -1,5 +1,6 @@
 {
   "extends": ["standard"],
+  "plugins": ["html"],
   "rules": {
     "import/no-absolute-path": ["off"]
   }

@@ -3,8 +3,7 @@
   <head>
     <meta charset='utf-8'>
     <title>@tooooools/html-to-svg</title>
-    <meta name='description' content='description'>
-    <meta name='viewport' content='width=device-width,height=device-height,initial-scale=1.0,minimal-ui'>
+    <meta name='viewport' content='width=device-width, height=device-height'>
     <style type='text/css'>
       @font-face {
         font-family: 'Ahem';
@@ -194,7 +193,7 @@
 
     <script src='html-to-svg.umd.js'></script>
     <script type='text/javascript'>
-      const $result = document.querySelector('.result')
+      const result = document.querySelector('.result')
       const render = new HtmlToSvg(document.querySelector('main'), {
         debug: true,
         ignore: '.html-only',
@@ -211,9 +210,9 @@
           const start = Date.now()
           await render.preload()
           const svg = await render.compute()
-          $result.innerHTML = svg.outerHTML
+          result.innerHTML = svg.outerHTML
 
-          $result.dataset.duration = Date.now() - start
+          result.dataset.duration = Date.now() - start
         } catch (error) {
           console.error(error)
         }

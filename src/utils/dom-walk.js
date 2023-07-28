@@ -1,7 +1,8 @@
-async function walk (children, callback) {
-  for (const child of children) {
-    if (!await callback(child)) continue
-    await walk(child.children, callback)
+async function walk (element, callback) {
+  if (!await callback(element)) return
+
+  for (const child of element.children) {
+    await walk(child, callback)
   }
 }
 

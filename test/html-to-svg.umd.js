@@ -3,6 +3,38 @@
   typeof define === 'function' && define.amd ? define(factory) :
   (global = global || self, global.HtmlToSvg = factory());
 })(this, (function () {
+  function _unsupportedIterableToArray(o, minLen) {
+    if (!o) return;
+    if (typeof o === "string") return _arrayLikeToArray(o, minLen);
+    var n = Object.prototype.toString.call(o).slice(8, -1);
+    if (n === "Object" && o.constructor) n = o.constructor.name;
+    if (n === "Map" || n === "Set") return Array.from(o);
+    if (n === "Arguments" || /^(?:Ui|I)nt(?:8|16|32)(?:Clamped)?Array$/.test(n)) return _arrayLikeToArray(o, minLen);
+  }
+  function _arrayLikeToArray(arr, len) {
+    if (len == null || len > arr.length) len = arr.length;
+    for (var i = 0, arr2 = new Array(len); i < len; i++) arr2[i] = arr[i];
+    return arr2;
+  }
+  function _createForOfIteratorHelperLoose(o, allowArrayLike) {
+    var it = typeof Symbol !== "undefined" && o[Symbol.iterator] || o["@@iterator"];
+    if (it) return (it = it.call(o)).next.bind(it);
+    if (Array.isArray(o) || (it = _unsupportedIterableToArray(o)) || allowArrayLike && o && typeof o.length === "number") {
+      if (it) o = it;
+      var i = 0;
+      return function () {
+        if (i >= o.length) return {
+          done: true
+        };
+        return {
+          done: false,
+          value: o[i++]
+        };
+      };
+    }
+    throw new TypeError("Invalid attempt to iterate non-iterable instance.\nIn order to be iterable, non-array objects must have a [Symbol.iterator]() method.");
+  }
+
   /**
    * https://opentype.js.org v1.3.4 | (c) Frederik De Bleser and other contributors | MIT License | Uses tiny-inflate by Devon Govett and string.prototype.codepointat polyfill by Mathias Bynens
    */
@@ -14751,38 +14783,6 @@
     };
   });
 
-  function _unsupportedIterableToArray(o, minLen) {
-    if (!o) return;
-    if (typeof o === "string") return _arrayLikeToArray(o, minLen);
-    var n = Object.prototype.toString.call(o).slice(8, -1);
-    if (n === "Object" && o.constructor) n = o.constructor.name;
-    if (n === "Map" || n === "Set") return Array.from(o);
-    if (n === "Arguments" || /^(?:Ui|I)nt(?:8|16|32)(?:Clamped)?Array$/.test(n)) return _arrayLikeToArray(o, minLen);
-  }
-  function _arrayLikeToArray(arr, len) {
-    if (len == null || len > arr.length) len = arr.length;
-    for (var i = 0, arr2 = new Array(len); i < len; i++) arr2[i] = arr[i];
-    return arr2;
-  }
-  function _createForOfIteratorHelperLoose(o, allowArrayLike) {
-    var it = typeof Symbol !== "undefined" && o[Symbol.iterator] || o["@@iterator"];
-    if (it) return (it = it.call(o)).next.bind(it);
-    if (Array.isArray(o) || (it = _unsupportedIterableToArray(o)) || allowArrayLike && o && typeof o.length === "number") {
-      if (it) o = it;
-      var i = 0;
-      return function () {
-        if (i >= o.length) return {
-          done: true
-        };
-        return {
-          done: false,
-          value: o[i++]
-        };
-      };
-    }
-    throw new TypeError("Invalid attempt to iterate non-iterable instance.\nIn order to be iterable, non-array objects must have a [Symbol.iterator]() method.");
-  }
-
   var matchFont = function matchFont(s) {
     return function (_temp) {
       var _s$getPropertyValue, _s$getPropertyValue2, _s$getPropertyValue3;
@@ -14893,7 +14893,6 @@
     SVG: svg
   };
 
-  /* global Node */
   const _iteratorSymbol = typeof Symbol !== "undefined" ? Symbol.iterator || (Symbol.iterator = Symbol("Symbol.iterator")) : "@@iterator";
   function _settle(pact, state, value) {
     if (!pact.s) {
@@ -15066,8 +15065,6 @@
     var _ref = _temp === void 0 ? {} : _temp,
       _ref$debug = _ref.debug,
       debug = _ref$debug === void 0 ? false : _ref$debug,
-      _ref$background = _ref.background,
-      background = _ref$background === void 0 ? true : _ref$background,
       _ref$ignore = _ref.ignore,
       ignore = _ref$ignore === void 0 ? '' : _ref$ignore,
       _ref$fonts = _ref.fonts,
@@ -15103,10 +15100,22 @@
           return Promise.reject(e);
         }
       },
+      // Clear cache and delete all resources
+      unload: function unload() {
+        try {
+          CACHE.clear();
+          for (var _iterator = _createForOfIteratorHelperLoose(fonts), _step; !(_step = _iterator()).done;) {
+            var font = _step.value;
+            delete font.opentype;
+          }
+          return Promise.resolve();
+        } catch (e) {
+          return Promise.reject(e);
+        }
+      },
       // Render the HTML container as a shadow SVG
       compute: function compute() {
         try {
-          var style = window.getComputedStyle(container);
           var viewBox = container.getBoundingClientRect();
 
           // Create the SVG container
@@ -15117,26 +15126,13 @@
             preserveAspectRatio: 'none'
           });
 
-          // Add a background
-          if (background) {
-            var _style$getPropertyVal;
-            $('rect', {
-              x: 0,
-              y: 0,
-              width: '100%',
-              height: '100%',
-              "class": 'background',
-              fill: (_style$getPropertyVal = style.getPropertyValue('background-color')) != null ? _style$getPropertyVal : 'white'
-            }, svg);
-          }
-
           // Render every children
           // TODO opacity
           return Promise.resolve(walk(container, function (element) {
             try {
               var _renderers$element$ta;
               if (ignore && element.matches(ignore)) return Promise.resolve();
-              var _style = window.getComputedStyle(element);
+              var style = window.getComputedStyle(element);
               var _element$getBoundingC = element.getBoundingClientRect(),
                 x = _element$getBoundingC.x,
                 y = _element$getBoundingC.y,
@@ -15150,12 +15146,9 @@
                 y: y - viewBox.y,
                 width: width,
                 height: height,
-                style: _style
+                style: style
               })).then(function (rendered) {
                 if (rendered) svg.appendChild(rendered);
-
-                // DEBUG
-                // if (element.tagName === 'I') return
 
                 // Render text nodes inside the element
                 var _temp4 = _forOf(element.childNodes, function (node) {
@@ -15166,13 +15159,13 @@
                       fragment = _ref2.fragment;
                     var _temp3 = _catch(function () {
                       // WIP
-                      if (rect.x === x) fragment.textContent = fragment.textContent.trimStart();
+                      if (rect.x === x + parseFloat(style.getPropertyValue('padding-left') || 0)) fragment.textContent = fragment.textContent.trimStart();
                       return Promise.resolve(renderers.text(fragment, {
                         x: rect.x - viewBox.x,
                         y: rect.y - viewBox.y,
                         width: rect.width,
                         height: rect.height,
-                        style: _style
+                        style: style
                       })).then(function (text) {
                         if (text) svg.appendChild(text);
                       });

@@ -33,9 +33,14 @@ export default function (container = document.body, {
       }
     },
 
+    // Clear cache and delete all resources
+    unload: async () => {
+      CACHE.clear()
+      for (const font of fonts) delete font.opentype
+    },
+
     // Render the HTML container as a shadow SVG
     compute: async () => {
-      const style = window.getComputedStyle(container)
       const viewBox = container.getBoundingClientRect()
 
       // Create the SVG container
@@ -46,19 +51,9 @@ export default function (container = document.body, {
         preserveAspectRatio: 'none'
       })
 
-      // Add a background
-      $('rect', {
-        x: 0,
-        y: 0,
-        width: '100%',
-        height: '100%',
-        class: 'background',
-        fill: style.getPropertyValue('background-color') ?? 'white'
-      }, svg)
-
       // Render every children
       // TODO opacity
-      await walk(container.children, async element => {
+      await walk(container, async element => {
         if (ignore && element.matches(ignore)) return
 
         const style = window.getComputedStyle(element)
@@ -75,9 +70,6 @@ export default function (container = document.body, {
         })
         if (rendered) svg.appendChild(rendered)
 
-        // DEBUG
-        // if (element.tagName === 'I') return
-
         // Render text nodes inside the element
         for (const node of element.childNodes) {
           if (node.nodeType !== Node.TEXT_NODE) continue
@@ -86,7 +78,7 @@ export default function (container = document.body, {
           for (const { rect, fragment } of getClientRects(node)) {
             try {
               // WIP
-              if (rect.x === x) fragment.textContent = fragment.textContent.trimStart()
+              if (rect.x === x + parseFloat(style.getPropertyValue('padding-left') || 0)) fragment.textContent = fragment.textContent.trimStart()
 
               const text = await renderers.text(fragment, {
                 x: rect.x - viewBox.x,
