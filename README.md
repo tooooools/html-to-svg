@@ -1,7 +1,9 @@
-# html-to-svg
+# @tooooools/html-to-svg
 
 Render in the browser an HTML element to SVG with vectorised fonts.  
 This module uses the [Range API](https://developer.mozilla.org/en-US/docs/Web/API/Range) for robust and precise text layout computation.
+
+<br>
 
 ## Features
 
@@ -51,9 +53,17 @@ This project primarily aims at rendering printable SVG files, in which case font
 
 At the time of writing, an an experimental [Local Font Access API](https://developer.chrome.com/en/articles/local-fonts/) is being tested, which could circumvent this issue. Contributions on implementing this API, or using native opt-in (or fallback) SVG `<text>` will be really appreciated.
 
+## Installation
+
+```
+npm install @tooooools/html-to-svg
+```
+
 ## Usage
 
 ```js
+import HtmlToSvg from '@tooooools/html-to-svg'
+
 const render = new HtmlToSvg(document.querySelector('main'), {
   debug: false,
   ignore: '.html-only, video', // CSS selector
