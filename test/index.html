@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang='en'>
+  <head>
+    <meta charset='utf-8'>
+    <title>@tooooools/html-to-svg</title>
+    <meta name='viewport' content='width=device-width, height=device-height'>
+
+    <style type='text/css'>
+      @font-face {
+        font-family: 'Ahem';
+        font-display: auto;
+        src: url('fonts/ahem.ttf') format('opentype');
+        font-style: normal;
+        font-weight: normal;
+      }
+
+      @font-face {
+        font-family: 'Roboto';
+        font-display: auto;
+        src: url('fonts/roboto-regular.ttf') format('opentype');
+        font-style: normal;
+        font-weight: normal;
+      }
+
+      @font-face {
+        font-family: 'Roboto';
+        font-display: auto;
+        src: url('fonts/roboto-italic.ttf') format('opentype');
+        font-style: italic;
+        font-weight: normal;
+      }
+
+      @font-face {
+        font-family: 'Roboto';
+        font-display: auto;
+        src: url('fonts/roboto-bold.ttf') format('opentype');
+        font-style: normal;
+        font-weight: bold;
+      }
+
+      :root {
+        --font-family: 'Roboto';
+      }
+    </style>
+    <link rel='stylesheet' type='text/css' href='index.css'>
+  </head>
+
+  <body>
+    <section data-label='roboto.ttf' contentEditable spellcheck='false'>
+      <div>Hello world</div>
+    </section>
+
+    <section data-label='ahem.ttf' style='font: 10rem Ahem; word-break: break-all;' contentEditable spellcheck='false'>
+      xpÉ&nbsp;x
+    </section>
+
+    <section  data-label='multiline' contentEditable spellcheck='false'>
+      Nisl facilisis ridiculus vehicula taciti a cubilia sem rutrum facilisi placerat justo nascetur sodales, in arcu aenean fermentum maximus et semper eleifend ante eros turpis laoreet. Turpis quisque augue proin egestas magna curae primis efficitur molestie diam dignissim vehicula penatibus conubia, duis neque mauris lorem montes tristique accumsan condimentum sit dolor etiam sed. Quis fusce suspendisse at cursus et elementum posuere ligula eleifend, accumsan phasellus varius ultrices aptent rhoncus per.
+    </section>
+
+    <section data-label='rich text' contentEditable spellcheck='false'>
+      <h1>Lorem ipsum</h1>
+      <p>Ligula <i>laoreet cras habitasse purus non</i> nam<sup>2</sup> justo mattis <small>lacinia vulputate</small>.</p>
+      <p><u>Primis egestas finibus tempor</u>, conubia netus interdum ultrices commodo <span style='color: red'>sapien fusce phasellus congue feugiat</span> cursus adipiscing.</p>
+      <p style='text-align: left'>Lorem ipsum dolor sit amet, consectetur adipisicing elit.</p>
+      <p style='text-align: center'>Lorem ipsum dolor sit amet, consectetur adipisicing elit.</p>
+      <p style='text-align: right'>Lorem ipsum dolor sit amet, consectetur adipisicing elit.</p>
+      <p style='line-height: 3'>Duis nec nulla natoque velit netus himenaeos tempor primis rhoncus volutpat aliquet, phasellus odio porta lacus ut elit metus mollis bibendum. Fusce himenaeos lacus ac aptent egestas sed leo vitae, gravida viverra et pharetra magna diam <u>habitasse imperdiet</u>, nisl consequat ut curae ad molestie porta.</p>
+    </section>
+
+    <section data-label='css letter-spacing' contentEditable spellcheck='false'>
+      <div style='letter-spacing: 0.5em'>Hello world</div>
+    </section>
+
+    <section data-label='image' contentEditable spellcheck='false'>
+      <img src='https://github.com/tooooools.png?size=100'>
+    </section>
+
+    <section data-label='canvas' contentEditable spellcheck='false'>
+      <canvas></canvas>
+      <script type='text/javascript'>
+        const canvas = document.querySelector('canvas')
+        const context = canvas.getContext('2d')
+        canvas.width = 116
+        canvas.height = 100
+        canvas.style.width = canvas.width + 'px'
+        canvas.style.height = canvas.height + 'px'
+        const path2D = new Path2D('M57.734,82.319C39.884,82.319 25.414,67.85 25.414,50C25.414,32.15 39.884,17.681 57.734,17.681C75.584,17.681 90.053,32.15 90.053,50C90.053,67.85 75.584,82.319 57.734,82.319M86.603,-0L28.867,-0L0,50L28.867,100L86.603,100L115.47,50L86.603,-0Z')
+        context.fill(path2D)
+      </script>
+    </section>
+
+    <section data-label='svg' contentEditable spellcheck='false'>
+      <svg class='icon' width='100px' height='100px' viewBox='0 0 116 100'>
+        <path d='M57.734,82.319C39.884,82.319 25.414,67.85 25.414,50C25.414,32.15 39.884,17.681 57.734,17.681C75.584,17.681 90.053,32.15 90.053,50C90.053,67.85 75.584,82.319 57.734,82.319M86.603,-0L28.867,-0L0,50L28.867,100L86.603,100L115.47,50L86.603,-0Z' style='fill:black;'/>
+      </svg>
+    </section>
+  </body>
+
+  <script src='html-to-svg.umd.js'></script>
+  <script type='text/javascript'>
+    const options = {
+      debug: window.location.hash === '#debug',
+      ignore: '.result',
+      fonts: [
+        { family: 'Ahem', url: 'fonts/ahem.ttf' },
+        { family: 'Roboto', url: 'fonts/roboto-regular.ttf' },
+        { family: 'Roboto', url: 'fonts/roboto-italic.ttf', style: 'italic' },
+        { family: 'Roboto', url: 'fonts/roboto-bold.ttf', weight: 'bold' },
+        { family: 'Roboto', url: 'fonts/roboto-bold.ttf', weight: '700' }
+      ]
+    }
+
+    document.body.classList.toggle('diff', window.location.hash === '#diff')
+
+    for (const section of document.querySelectorAll('section')) {
+      const render = new HtmlToSvg(section, options)
+      const result = document.createElement('div')
+      result.classList.add('result')
+      section.parentNode.insertBefore(result, section.nextSibling)
+
+      section.addEventListener('input', () => update(render, result))
+      if (document.readyState === 'complete') update(render, result)
+      else window.addEventListener('load', () => update(render, result))
+    }
+
+    async function update (render, result) {
+      result.innerHTML = ''
+
+      try {
+        const start = Date.now()
+        await render.preload()
+        const svg = await render.compute()
+        result.innerHTML = svg.outerHTML
+        result.dataset.duration = Date.now() - start
+      } catch (error) {
+        console.error(error)
+      }
+    }
+  </script>
+</html>
