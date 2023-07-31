@@ -111,7 +111,7 @@ export default ({ debug, fonts }) => async (element, props) => {
   return rect
 
   // or with utils/dom-render-svg:
-  return $('circle', { x, y, width, height })
+  return $('rect', { x, y, width, height })
 }
 
 ```
@@ -120,15 +120,15 @@ export default ({ debug, fonts }) => async (element, props) => {
 
 ```sh
 $ yarn build
-$ yarn example    # build and live-serve example/
+$ yarn example # build and live-serve example/
 $ yarn version # build module, example, and publish to npm
 ```
 
 ## Readings
 
-- [_Deep dive CSS: font metrics, line-height and vertical-align_, Vincent De Oliveira](https://iamvdo.me/en/blog/css-font-metrics-line-height-and-vertical-align)
-- [_Detecting Rendered Line Breaks In A Text Node In JavaScript_, Ben Nadel](https://www.bennadel.com/blog/4310-detecting-rendered-line-breaks-in-a-text-node-in-javascript.htm)
-- [_CSS Inline Layout Module Level 3_](https://www.w3.org/TR/css-inline-3/#baseline-intro)
+- [Deep dive CSS: font metrics, line-height and vertical-align](https://iamvdo.me/en/blog/css-font-metrics-line-height-and-vertical-align), Vincent De Oliveira
+- [Detecting Rendered Line Breaks In A Text Node In JavaScript](https://www.bennadel.com/blog/4310-detecting-rendered-line-breaks-in-a-text-node-in-javascript.htm), Ben Nadel
+- [CSS Inline Layout Module Level 3](https://www.w3.org/TR/css-inline-3/#baseline-intro)
 
 ## Credits 
 
