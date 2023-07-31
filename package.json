@@ -12,11 +12,11 @@
   "module": "./dist/html-to-svg.module.js",
   "unpkg": "./dist/html-to-svg.umd.js",
   "scripts": {
-    "build": "npm run test && microbundle",
-    "test": "npm run test:build -- -w & light-server -s test -p 1337 -w 'test, test/**'",
-    "test:build": "microbundle -o test -f umd --external all --compress false",
-    "preversion": "npm run build && npm run test:build && git add dist test ",
-    "postversion": "git push && git push --tags && ghp test -f && npm publish"
+    "build": "microbundle",
+    "example": "npm run example:build -- -w & light-server -s example -p 1337 -w 'example, example/**'",
+    "example:build": "microbundle -o example -f umd --external all --compress false",
+    "preversion": "npm run build && git add dist example",
+    "postversion": "git push && git push --tags && ghp example -f && npm publish"
   },
   "files": [
     "dist"

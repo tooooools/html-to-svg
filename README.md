@@ -108,7 +108,7 @@ export default ({ debug, fonts }) => async (element, props) => {
 
 ```sh
 $ yarn build
-$ yarn test    # build and live-serve test/
+$ yarn example    # build and live-serve example/
 $ yarn version # build module, example, and publish to npm
 ```
 
