@@ -3,6 +3,8 @@
 Render in the browser an HTML element to SVG with vectorised fonts.  
 This module uses the [Range API](https://developer.mozilla.org/en-US/docs/Web/API/Range) for robust and precise text layout computation.
 
+https://github.com/tooooools/html-to-svg/assets/2837959/9bf213c6-620d-4e9a-b9a7-b399c2a93430
+
 <br>
 
 ## Features
