@@ -1,12 +1,11 @@
 /* global DocumentFragment */
 
 // Return Range.clientRects with their corresponding DocumentFragment
-export default function (node) {
+export default function (node, text = node.innerText || node.textContent) {
   const range = document.createRange()
 
   const rects = []
-  let y = 0
-  for (let i = 0; i < node.textContent.length; i++) {
+  for (let i = 0; i < node.length; i++) {
     range.setStart(node, 0)
     range.setEnd(node, (i + 1))
 
@@ -15,7 +14,7 @@ export default function (node) {
     const index = clientRects.length - 1
     rects[index] = rects[index] ?? { text: '' }
     rects[index].rect = clientRects[index]
-    rects[index].text += node.textContent.charAt(i)
+    rects[index].text += text.charAt(i)
   }
 
   return rects.map(rect => {

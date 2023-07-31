@@ -1,12 +1,13 @@
 import $ from '../utils/dom-render-svg'
 
 export default ({
-  CACHE,
   debug,
   fonts
 }) => async (element, { x, y, width, height, style }) => {
   if (!width || !height) return
 
+  // TODO background-image
+  // TODO border
   const backgroundColor = style.getPropertyValue('background-color')
 
   // Skip visually empty blocks

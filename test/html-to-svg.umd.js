@@ -14652,10 +14652,13 @@
   /* global DocumentFragment */
 
   // Return Range.clientRects with their corresponding DocumentFragment
-  function getClientRects (node) {
+  function getClientRects (node, text) {
+    if (text === void 0) {
+      text = node.innerText || node.textContent;
+    }
     var range = document.createRange();
     var rects = [];
-    for (var i = 0; i < node.textContent.length; i++) {
+    for (var i = 0; i < node.length; i++) {
       var _rects$index;
       range.setStart(node, 0);
       range.setEnd(node, i + 1);
@@ -14665,7 +14668,7 @@
         text: ''
       };
       rects[index].rect = clientRects[index];
-      rects[index].text += node.textContent.charAt(i);
+      rects[index].text += text.charAt(i);
     }
     return rects.map(function (rect) {
       rect.fragment = new DocumentFragment();
@@ -14718,6 +14721,9 @@
         style = _ref2.style;
       try {
         if (!width || !height) return Promise.resolve();
+
+        // TODO background-image
+        // TODO border
         var backgroundColor = style.getPropertyValue('background-color');
 
         // Skip visually empty blocks
@@ -14798,7 +14804,7 @@
   var text = (function (_ref2) {
     var debug = _ref2.debug,
       fonts = _ref2.fonts;
-    return function (element, _ref3) {
+    return function (string, _ref3) {
       var x = _ref3.x,
         y = _ref3.y,
         width = _ref3.width,
@@ -14822,16 +14828,16 @@
             "class": 'debug'
           }, g);
         };
-        if (!element) return Promise.resolve();
-        if (!element.textContent) return Promise.resolve();
+        if (!string) return Promise.resolve();
         var g = $('g');
 
         // Find font
         var font = fonts.find(matchFont(style));
-        if (!font) throw new Error("Cannot find font '" + style.getPropertyValue('font-family') + "'");
+        if (!font) throw new Error("Cannot find font '" + style.getPropertyValue('font-family') + " " + style.getPropertyValue('font-style') + " " + style.getPropertyValue('font-weight') + "'");
 
         // Extract font metrics
         var unitsPerEm = font.opentype.unitsPerEm;
+        var ascender = font.opentype.tables.hhea.ascender;
         var descender = font.opentype.tables.hhea.descender;
 
         // Extract CSS props
@@ -14839,7 +14845,8 @@
         var fontSize = parseFloat(style.getPropertyValue('font-size'));
 
         // Compute metrics
-        var leading = fontSize - Math.abs(descender / unitsPerEm) * fontSize;
+        var lineBox = (ascender - descender) / unitsPerEm;
+        var leading = fontSize * lineBox - Math.abs(descender / unitsPerEm) * fontSize;
 
         // Render various metrics for debug
         line('start', 0, {
@@ -14855,7 +14862,7 @@
         });
         if (letterSpacing !== 'normal') {
           // Render letter by letter in case of non-default letter-spacing
-          for (var _iterator = _createForOfIteratorHelperLoose(element.textContent), _step; !(_step = _iterator()).done;) {
+          for (var _iterator = _createForOfIteratorHelperLoose(string), _step; !(_step = _iterator()).done;) {
             var c = _step.value;
             $('path', {
               d: font.opentype.getPath(c, x, y + leading, fontSize).toPathData(3),
@@ -14864,9 +14871,9 @@
             x += font.opentype.getAdvanceWidth(c, fontSize) + parseFloat(letterSpacing);
           }
         } else {
-          // Render text
+          // Render string
           $('path', {
-            d: font.opentype.getPath(element.textContent, x, y + leading, fontSize, {
+            d: font.opentype.getPath(string, x, y + leading, fontSize, {
               features: {
                 // TODO extract from CSS props
                 liga: true,
@@ -14888,6 +14895,7 @@
     div: div,
     text: text,
     svg: svg,
+    DIV: div,
     CANVAS: canvas,
     IMG: image,
     SVG: svg
@@ -15069,13 +15077,10 @@
       ignore = _ref$ignore === void 0 ? '' : _ref$ignore,
       _ref$fonts = _ref.fonts,
       fonts = _ref$fonts === void 0 ? [] : _ref$fonts;
-    var CACHE = new Map();
-
     // Init curried renderers
     var renderers = {};
     for (var k in RENDERERS) {
       renderers[k] = RENDERERS[k]({
-        CACHE: CACHE,
         debug: debug,
         fonts: fonts
       });
@@ -15101,16 +15106,10 @@
         }
       },
       // Clear cache and delete all resources
-      unload: function unload() {
-        try {
-          CACHE.clear();
-          for (var _iterator = _createForOfIteratorHelperLoose(fonts), _step; !(_step = _iterator()).done;) {
-            var font = _step.value;
-            delete font.opentype;
-          }
-          return Promise.resolve();
-        } catch (e) {
-          return Promise.reject(e);
+      flush: function flush() {
+        for (var _iterator = _createForOfIteratorHelperLoose(fonts), _step; !(_step = _iterator()).done;) {
+          var font = _step.value;
+          delete font.opentype;
         }
       },
       // Render the HTML container as a shadow SVG
@@ -15127,11 +15126,12 @@
           });
 
           // Render every children
-          // TODO opacity
           return Promise.resolve(walk(container, function (element) {
             try {
               var _renderers$element$ta;
-              if (ignore && element.matches(ignore)) return Promise.resolve();
+              if (ignore && element !== container && element.matches(ignore)) return Promise.resolve();
+
+              // TODO opacity
               var style = window.getComputedStyle(element);
               var _element$getBoundingC = element.getBoundingClientRect(),
                 x = _element$getBoundingC.x,
@@ -15151,32 +15151,45 @@
                 if (rendered) svg.appendChild(rendered);
 
                 // Render text nodes inside the element
-                var _temp4 = _forOf(element.childNodes, function (node) {
-                  if (node.nodeType !== Node.TEXT_NODE) return;
-                  if (!node.textContent.trim().replace(/\s+/g, '').length) return;
-                  return _forOf(getClientRects(node), function (_ref2) {
-                    var rect = _ref2.rect,
-                      fragment = _ref2.fragment;
-                    var _temp3 = _catch(function () {
-                      // WIP
-                      if (rect.x === x + parseFloat(style.getPropertyValue('padding-left') || 0)) fragment.textContent = fragment.textContent.trimStart();
-                      return Promise.resolve(renderers.text(fragment, {
-                        x: rect.x - viewBox.x,
-                        y: rect.y - viewBox.y,
-                        width: rect.width,
-                        height: rect.height,
-                        style: style
-                      })).then(function (text) {
-                        if (text) svg.appendChild(text);
+                var _temp4 = function () {
+                  if (element.innerText) {
+                    return _forOf(element.childNodes, function (node) {
+                      if (node.nodeType !== Node.TEXT_NODE) return;
+                      if (!node.textContent.length) return;
+
+                      // Text interface does not provide a .innerText method, which would be
+                      // more appropriate than textContent as it skips non-rendered whitespaces
+                      // Splitting white-space leading Text trick the browser to recompute
+                      // the layout itself, dealing with implicit space between adjacent nodes
+                      if (/^\s/.test(node.textContent)) {
+                        node.splitText(1);
+                        return;
+                      }
+                      return _forOf(getClientRects(node), function (_ref2) {
+                        var rect = _ref2.rect,
+                          fragment = _ref2.fragment;
+                        var _temp3 = _catch(function () {
+                          return Promise.resolve(renderers.text(fragment.textContent.trimEnd(), {
+                            x: rect.x - viewBox.x,
+                            y: rect.y - viewBox.y,
+                            width: rect.width,
+                            height: rect.height,
+                            style: style
+                          })).then(function (text) {
+                            if (text) svg.appendChild(text);
+                          });
+                        }, function (error) {
+                          // TODO[improve] error handling
+                          console.warn(new Error("Rendering failed for the following text: '" + fragment.textContent + "'", {
+                            cause: error
+                          }));
+                          console.warn(error);
+                        });
+                        if (_temp3 && _temp3.then) return _temp3.then(function () {});
                       });
-                    }, function (error) {
-                      console.warn(new Error("Rendering failed for the following text:\n'" + fragment.textContent + "'", {
-                        cause: error
-                      }));
                     });
-                    if (_temp3 && _temp3.then) return _temp3.then(function () {});
-                  });
-                });
+                  }
+                }();
                 return _temp4 && _temp4.then ? _temp4.then(function () {
                   // Continue walking
                   return true;

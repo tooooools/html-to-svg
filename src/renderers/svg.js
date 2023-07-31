@@ -2,7 +2,6 @@
 import $ from '../utils/dom-render-svg'
 
 export default ({
-  CACHE,
   debug,
   fonts
 }) => async (element, { x, y, width, height, style }) => $('image', {

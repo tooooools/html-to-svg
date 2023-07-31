@@ -8,6 +8,9 @@ export {
   div,
   text,
   svg,
+
+  // Match HTMLElement.tagName casing
+  div as DIV,
   canvas as CANVAS,
   image as IMG,
   svg as SVG

@@ -1,3 +1,5 @@
+// TODO text-decoration
+
 import $ from '../utils/dom-render-svg'
 
 const matchFont = s => ({ family, style = 'normal', weight = '400' } = {}) =>
@@ -6,21 +8,20 @@ const matchFont = s => ({ family, style = 'normal', weight = '400' } = {}) =>
     weight === (s.getPropertyValue('font-weight') ?? '400')
 
 export default ({
-  CACHE,
   debug,
   fonts
-}) => async (element, { x, y, width, height, style }) => {
-  if (!element) return
-  if (!element.textContent) return
+}) => async (string, { x, y, width, height, style }) => {
+  if (!string) return
 
   const g = $('g')
 
   // Find font
   const font = fonts.find(matchFont(style))
-  if (!font) throw new Error(`Cannot find font '${style.getPropertyValue('font-family')}'`)
+  if (!font) throw new Error(`Cannot find font '${style.getPropertyValue('font-family')} ${style.getPropertyValue('font-style')} ${style.getPropertyValue('font-weight')}'`)
 
   // Extract font metrics
   const { unitsPerEm } = font.opentype
+  const ascender = font.opentype.tables.hhea.ascender
   const descender = font.opentype.tables.hhea.descender
 
   // Extract CSS props
@@ -28,7 +29,8 @@ export default ({
   const fontSize = parseFloat(style.getPropertyValue('font-size'))
 
   // Compute metrics
-  const leading = fontSize - Math.abs(descender / unitsPerEm) * fontSize
+  const lineBox = (ascender - descender) / unitsPerEm
+  const leading = (fontSize * lineBox) - Math.abs(descender / unitsPerEm) * fontSize
 
   // Render various metrics for debug
   line('start', 0, { orientation: 'vertical', stroke: 'red' })
@@ -37,7 +39,7 @@ export default ({
 
   if (letterSpacing !== 'normal') {
     // Render letter by letter in case of non-default letter-spacing
-    for (const c of element.textContent) {
+    for (const c of string) {
       $('path', {
         d: font.opentype.getPath(c, x, y + leading, fontSize).toPathData(3),
         fill: style.getPropertyValue('color')
@@ -45,9 +47,9 @@ export default ({
       x += font.opentype.getAdvanceWidth(c, fontSize) + parseFloat(letterSpacing)
     }
   } else {
-    // Render text
+    // Render string
     $('path', {
-      d: font.opentype.getPath(element.textContent, x, y + leading, fontSize, {
+      d: font.opentype.getPath(string, x, y + leading, fontSize, {
         features: {
           // TODO extract from CSS props
           liga: true,

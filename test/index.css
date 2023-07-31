@@ -1,0 +1,75 @@
+/* This stylesheet is only for cosmetics */
+
+:root {
+  --space: 2.0rem;
+  --space-xl: 4.0rem;
+}
+
+html {
+  font-size: 62.5%;
+}
+
+body {
+  margin: 0;
+  padding: 0;
+
+  font-family: Poppins;
+  font-size: var(--space);
+
+  background: #EFEFEF;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  -webkit-text-size-adjust: 100%;
+}
+
+main {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: var(--space-xl) var(--space);
+  padding: var(--space-xl) var(--space);
+}
+
+img, svg {
+  vertical-align: bottom;
+}
+
+section, .result {
+  position: relative;
+}
+
+section::before, .result::before {
+  top: -2em;
+  position: absolute;
+  font-size: small;
+  font-family: -apple-system, system-ui, sans-serif;
+}
+
+section {
+  padding: var(--space);
+  background: white;
+  border-radius: 0.8rem;
+}
+
+section::before {
+  content: attr(data-label);
+  left: 0;
+  text-transform: lowercase;
+  font-variant: small-caps;
+}
+
+.result[data-duration]::before {
+  content: attr(data-duration)'\2009ms';
+  right: 0;
+  opacity: 0.3;
+}
+
+body.diff section {
+  transform: translateX(calc(50% + var(--space) / 2));
+}
+
+body.diff .result {
+  pointer-events: none;
+  transform: translateX(calc(-50% - var(--space) / 2));
+  mix-blend-mode: difference;
+}
