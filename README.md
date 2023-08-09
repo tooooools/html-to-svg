@@ -1,7 +1,8 @@
-# @tooooools/html-to-svg
-
-Render in the browser an HTML element to SVG with vectorised fonts.  
+# tooooools/html-to-svg [<img src="https://github.com/tooooools.png?size=100" size="100" align="right">](http://github.com/tooooools/)
+> Render in the browser an HTML element to SVG with vectorised fonts.  
 This module uses the [Range API](https://developer.mozilla.org/en-US/docs/Web/API/Range) for robust and precise text layout computation.
+
+<br>
 
 https://github.com/tooooools/html-to-svg/assets/2837959/9bf213c6-620d-4e9a-b9a7-b399c2a93430
 
