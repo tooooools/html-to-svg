@@ -5,7 +5,7 @@
   "source": "src/index.js",
   "exports": {
     "require": "./dist/html-to-svg.js",
-    "default": "./dist/html-to-svg.modern.js"
+    "default": "./dist/html-to-svg.modern.mjs"
   },
   "amdName": "HtmlToSvg",
   "main": "./dist/html-to-svg.js",
