@@ -48,6 +48,10 @@ export default function (container = document.body, {
         preserveAspectRatio: 'none'
       })
 
+      // Set the parent to the current SVG.
+      // This parent will change during the walk
+      let parent = svg
+
       // Render every children
       await walk(container, async element => {
         if (ignore && element !== container && element.matches(ignore)) return
@@ -55,6 +59,14 @@ export default function (container = document.body, {
         // TODO opacity
         const style = window.getComputedStyle(element)
         const { x, y, width, height } = element.getBoundingClientRect()
+
+        // Handle CSS clip-path property
+        const clipPathValue = style.getPropertyValue('clip-path')
+        if (clipPathValue !== 'none') {
+          parent = $('g', null, svg)
+          // WARNING: CSS clip-path implementation is not done yet on arnaudjuracek/svg-to-pdf
+          parent.setAttribute('style', `clip-path: ${clipPathValue}`)
+        }
 
         // Render element
         const render = renderers[element.tagName] ?? renderers.div
@@ -65,7 +77,8 @@ export default function (container = document.body, {
           height,
           style
         })
-        if (rendered) svg.appendChild(rendered)
+
+        if (rendered) parent.appendChild(rendered)
 
         // Render text nodes inside the element
         if (element.innerText) {
@@ -91,7 +104,7 @@ export default function (container = document.body, {
                   height: rect.height,
                   style
                 })
-                if (text) svg.appendChild(text)
+                if (text) parent.appendChild(text)
               } catch (error) {
                 // TODO[improve] error handling
                 console.warn(new Error(`Rendering failed for the following text: '${fragment.textContent}'`, { cause: error }))
