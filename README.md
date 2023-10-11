@@ -44,7 +44,6 @@ Render inline `<svg>` element as a base64 in a SVG `<image>` element.
 - Support for CSS `background-image` property
 - Support for CSS `border` property
 - Support for CSS `opacity` property
-- Support for CSS `z-index` property
 - Support for CSS `transform: rotate()` property
 - Support for CSS `transform: skew()` property
 

@@ -1,8 +1,8 @@
-async function walk (element, callback) {
+async function walk (element, callback, { sort = () => 1 } = {}) {
   if (!await callback(element)) return
 
-  for (const child of element.children) {
-    await walk(child, callback)
+  for (const child of Array.from(element.children).sort(sort)) {
+    await walk(child, callback, { sort })
   }
 }
 

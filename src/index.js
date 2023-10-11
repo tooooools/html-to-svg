@@ -1,6 +1,7 @@
 /* global Node */
 import Opentype from 'opentype.js'
 import walk from './utils/dom-walk'
+import getZIndex from './utils/dom-get-zindex'
 import getClientRects from './utils/range-get-client-rects'
 
 import $ from './utils/dom-render-svg'
@@ -116,6 +117,12 @@ export default function (container = document.body, {
 
         // Continue walking
         return true
+      }, {
+        sort: (a, b) => {
+          a.zIndex = a.zIndex ?? getZIndex(a)
+          b.zIndex = b.zIndex ?? getZIndex(b)
+          return a.zIndex - b.zIndex
+        }
       })
 
       return svg
