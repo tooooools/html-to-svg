@@ -12,13 +12,17 @@ export default function ({
   ignore = '',
   fonts = []
 } = {}) {
+  const cache = new Map()
+
   // Init curried renderers
   const renderers = {}
   for (const k in RENDERERS) {
-    renderers[k] = RENDERERS[k]({ debug, fonts })
+    renderers[k] = RENDERERS[k]({ debug, fonts, cache })
   }
 
   return {
+    get cache () { return cache },
+
     // Preload all fonts before resolving
     preload: async function () {
       for (const font of fonts) {
@@ -34,6 +38,7 @@ export default function ({
 
     // Clear cache and delete all resources
     destroy: function () {
+      cache.clear()
       for (const font of fonts) delete font.opentype
     },
 

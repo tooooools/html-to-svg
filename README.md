@@ -66,6 +66,7 @@ npm install @tooooools/html-to-svg
 ```js
 import HtmlToSvg from '@tooooools/html-to-svg'
 
+// Instanciate a new renderer
 const renderer = new HtmlToSvg({
   debug: false,
   ignore: '.html-only, video', // CSS selector
@@ -76,12 +77,17 @@ const renderer = new HtmlToSvg({
   ]
 })
 
+// Preload the fonts inside the renderer
 await renderer.preload()
-
+  
+// Render a DOMElement
 const svg = await renderer.render(document.querySelector('main'))
 
+// Do whatever you want with the returned shadow SVGElement
 document.body.appendChild(svg)
 download(svg.outerHTML)
+
+renderer.destroy()
 ```
 
 ## Contributing
