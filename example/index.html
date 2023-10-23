@@ -119,7 +119,7 @@
 
   <script src='html-to-svg.umd.js'></script>
   <script type='text/javascript'>
-    const options = {
+    const renderer = new HtmlToSvg({
       debug: window.location.hash === '#debug',
       ignore: '.result',
       fonts: [
@@ -129,28 +129,27 @@
         { family: 'Roboto', url: 'fonts/roboto-bold.ttf', weight: 'bold' },
         { family: 'Roboto', url: 'fonts/roboto-bold.ttf', weight: '700' }
       ]
-    }
+    })
 
     document.body.classList.toggle('diff', window.location.hash === '#diff')
 
     for (const section of document.querySelectorAll('section')) {
-      const render = new HtmlToSvg(section, options)
       const result = document.createElement('div')
       result.classList.add('result')
       section.parentNode.insertBefore(result, section.nextSibling)
 
-      section.addEventListener('input', () => update(render, result))
-      if (document.readyState === 'complete') update(render, result)
-      else window.addEventListener('load', () => update(render, result))
+      section.addEventListener('input', () => render(section, result))
+      if (document.readyState === 'complete') render(section, result)
+      else window.addEventListener('load', () => render(section, result))
     }
 
-    async function update (render, result) {
+    async function render (section, result) {
       result.innerHTML = ''
 
       try {
         const start = Date.now()
-        await render.preload()
-        const svg = await render.compute()
+        await renderer.preload()
+        const svg = await renderer.render(section)
         result.innerHTML = svg.outerHTML
         result.dataset.duration = Date.now() - start
       } catch (error) {

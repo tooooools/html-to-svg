@@ -15078,10 +15078,7 @@
     }
     return result;
   }
-  function index (container, _temp) {
-    if (container === void 0) {
-      container = document.body;
-    }
+  function index (_temp) {
     var _ref = _temp === void 0 ? {} : _temp,
       _ref$debug = _ref.debug,
       debug = _ref$debug === void 0 ? false : _ref$debug,
@@ -15118,14 +15115,14 @@
         }
       },
       // Clear cache and delete all resources
-      flush: function flush() {
+      unload: function unload() {
         for (var _iterator = _createForOfIteratorHelperLoose(fonts), _step; !(_step = _iterator()).done;) {
           var font = _step.value;
           delete font.opentype;
         }
       },
       // Render the HTML container as a shadow SVG
-      compute: function compute() {
+      render: function render(container) {
         try {
           var viewBox = container.getBoundingClientRect();
 

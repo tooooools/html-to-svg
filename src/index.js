@@ -7,7 +7,7 @@ import getClientRects from './utils/range-get-client-rects'
 import $ from './utils/dom-render-svg'
 import * as RENDERERS from './renderers'
 
-export default function (container = document.body, {
+export default function ({
   debug = false,
   ignore = '',
   fonts = []
@@ -33,12 +33,12 @@ export default function (container = document.body, {
     },
 
     // Clear cache and delete all resources
-    flush: function () {
+    destroy: function () {
       for (const font of fonts) delete font.opentype
     },
 
     // Render the HTML container as a shadow SVG
-    compute: async function () {
+    render: async function (container) {
       const viewBox = container.getBoundingClientRect()
 
       // Create the SVG container

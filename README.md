@@ -66,7 +66,7 @@ npm install @tooooools/html-to-svg
 ```js
 import HtmlToSvg from '@tooooools/html-to-svg'
 
-const render = new HtmlToSvg(document.querySelector('main'), {
+const renderer = new HtmlToSvg({
   debug: false,
   ignore: '.html-only, video', // CSS selector
   fonts: [
@@ -76,8 +76,9 @@ const render = new HtmlToSvg(document.querySelector('main'), {
   ]
 })
 
-await render.preload()
-const svg = await render.compute()
+await renderer.preload()
+
+const svg = await renderer.render(document.querySelector('main'))
 
 document.body.appendChild(svg)
 download(svg.outerHTML)
