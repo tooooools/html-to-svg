@@ -81,7 +81,10 @@ const renderer = new HtmlToSvg({
 await renderer.preload()
   
 // Render a DOMElement
-const svg = await renderer.render(document.querySelector('main'))
+const options = { 
+  rasterizeNestedSVG: true // Convert <svg> into <image>
+}
+const svg = await renderer.render(document.querySelector('main'), options)
 
 // Do whatever you want with the returned shadow SVGElement
 document.body.appendChild(svg)

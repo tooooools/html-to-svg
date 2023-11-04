@@ -1,11 +1,9 @@
 /* global FileReader, XMLSerializer, btoa, XMLHttpRequest */
 import $ from '../utils/dom-render-svg'
 
-export default ({
-  debug,
-  fonts,
-  cache
-}) => async (element, { x, y, width, height, style }) => {
+export default ({ cache }) => async (element, { x, y, width, height, style }, {
+  rasterizeNestedSVG = true
+} = {}) => {
   // Convert all image to dataURL to maximizime compatibility
   for (const image of element.querySelectorAll('image[href]')) {
     const src = image.getAttribute('href')
@@ -34,11 +32,24 @@ export default ({
     image.setAttribute('href', cache.get(src))
   }
 
-  return $('image', {
-    x,
-    y,
-    width,
-    height,
-    href: 'data:image/svg+xml;base64,' + btoa(new XMLSerializer().serializeToString(element))
-  })
+  return rasterizeNestedSVG
+    ? $('image', {
+      x,
+      y,
+      width,
+      height,
+      href: 'data:image/svg+xml;base64,' + btoa(new XMLSerializer().serializeToString(element))
+    })
+    : (() => {
+        const svg = $('svg', {
+          x,
+          y,
+          width,
+          height,
+          viewbox: `0 0 ${width} ${height}`
+        })
+
+        svg.innerHTML = element.outerHTML
+        return svg
+      })()
 }

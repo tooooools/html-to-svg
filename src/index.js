@@ -43,7 +43,7 @@ export default function ({
     },
 
     // Render the HTML container as a shadow SVG
-    render: async function (container) {
+    render: async function (container, options = {}) {
       const viewBox = container.getBoundingClientRect()
 
       // Create the SVG container
@@ -82,7 +82,7 @@ export default function ({
           width,
           height,
           style
-        })
+        }, options)
 
         if (rendered) parent.appendChild(rendered)
 
@@ -109,7 +109,7 @@ export default function ({
                   width: rect.width,
                   height: rect.height,
                   style
-                })
+                }, options)
                 if (text) parent.appendChild(text)
               } catch (error) {
                 // TODO[improve] error handling
