@@ -49,7 +49,7 @@ export default ({ cache }) => async (element, { x, y, width, height, style }, {
           viewbox: `0 0 ${width} ${height}`
         })
 
-        svg.innerHTML = element.outerHTML
+        svg.innerHTML = element.innerHTML
         return svg
       })()
 }
