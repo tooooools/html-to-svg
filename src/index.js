@@ -43,7 +43,7 @@ export default function ({
     },
 
     // Render the HTML container as a shadow SVG
-    render: async function (container, options = {}) {
+    render: async function (container, options = {}, transform = (from, to) => to) {
       const viewBox = container.getBoundingClientRect()
 
       // Create the SVG container
@@ -76,7 +76,7 @@ export default function ({
 
         // Render element
         const render = renderers[element.tagName] ?? renderers.div
-        const rendered = await render(element, {
+        let rendered = await render(element, {
           x: x - viewBox.x,
           y: y - viewBox.y,
           width,
@@ -84,6 +84,7 @@ export default function ({
           style
         }, options)
 
+        rendered = await transform(element, rendered)
         if (rendered) parent.appendChild(rendered)
 
         // Render text nodes inside the element
@@ -103,13 +104,15 @@ export default function ({
 
             for (const { rect, fragment } of getClientRects(node)) {
               try {
-                const text = await renderers.text(fragment.textContent.trimEnd(), {
+                let text = await renderers.text(fragment.textContent.trimEnd(), {
                   x: rect.x - viewBox.x,
                   y: rect.y - viewBox.y,
                   width: rect.width,
                   height: rect.height,
                   style
                 }, options)
+
+                text = await transform(element, text)
                 if (text) parent.appendChild(text)
               } catch (error) {
                 // TODO[improve] error handling

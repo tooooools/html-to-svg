@@ -84,7 +84,10 @@ await renderer.preload()
 const options = { 
   rasterizeNestedSVG: true // Convert <svg> into <image>
 }
-const svg = await renderer.render(document.querySelector('main'), options)
+
+const transform = async (from, to) => to
+
+const svg = await renderer.render(document.querySelector('main'), options, transform)
 
 // Do whatever you want with the returned shadow SVGElement
 document.body.appendChild(svg)
