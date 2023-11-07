@@ -71,7 +71,7 @@ export default function ({
         if (clipPathValue !== 'none') {
           parent = $('g', null, svg)
           // WARNING: CSS clip-path implementation is not done yet on arnaudjuracek/svg-to-pdf
-          parent.setAttribute('style', `clip-path: ${clipPathValue}`)
+          parent.setAttribute('style', `clip-path: ${clipPathValue.replace(/"/g, "'")}`)
         }
 
         // Render element
