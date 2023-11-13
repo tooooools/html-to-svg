@@ -43,7 +43,7 @@ export default function ({
     },
 
     // Render the HTML container as a shadow SVG
-    render: async function (container, options = {}, transform = (from, to) => to) {
+    render: async function (container, options = {}, transform) {
       const viewBox = container.getBoundingClientRect()
 
       // Create the SVG container
@@ -84,7 +84,7 @@ export default function ({
           style
         }, options)
 
-        rendered = await transform(element, rendered)
+        if (transform) rendered = await transform(element, rendered)
         if (rendered) parent.appendChild(rendered)
 
         // Render text nodes inside the element
@@ -112,7 +112,7 @@ export default function ({
                   style
                 }, options)
 
-                text = await transform(element, text)
+                if (transform) text = await transform(element, text)
                 if (text) parent.appendChild(text)
               } catch (error) {
                 // TODO[improve] error handling
