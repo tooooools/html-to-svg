@@ -62,16 +62,19 @@ export default function ({
       await walk(container, async element => {
         if (ignore && element !== container && element.matches(ignore)) return
 
-        // TODO opacity
         const style = window.getComputedStyle(element)
         const { x, y, width, height } = element.getBoundingClientRect()
 
-        // Handle CSS clip-path property
-        const clipPathValue = style.getPropertyValue('clip-path')
-        if (clipPathValue !== 'none') {
-          parent = $('g', null, svg)
-          // WARNING: CSS clip-path implementation is not done yet on arnaudjuracek/svg-to-pdf
-          parent.setAttribute('style', `clip-path: ${clipPathValue.replace(/"/g, "'")}`)
+        if (element instanceof window.HTMLElement) {
+          // TODO opacity
+
+          // Handle CSS clip-path property
+          const clipPathValue = style.getPropertyValue('clip-path')
+          if (clipPathValue !== 'none') {
+            parent = $('g', null, svg)
+            // WARNING: CSS clip-path implementation is not done yet on arnaudjuracek/svg-to-pdf
+            parent.setAttribute('style', `clip-path: ${clipPathValue.replace(/"/g, "'")}`)
+          }
         }
 
         // Render element
