@@ -1,6 +1,6 @@
 {
   "name": "@tooooools/html-to-svg",
-  "version": "1.5.1",
+  "version": "1.5.2",
   "description": "Render HTML to SVG",
   "source": "src/index.js",
   "exports": {
