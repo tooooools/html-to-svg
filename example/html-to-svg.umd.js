@@ -14477,22 +14477,22 @@
   	loadSync: loadSync
   });
 
-  var _iteratorSymbol$1 = typeof Symbol !== "undefined" ? Symbol.iterator || (Symbol.iterator = Symbol("Symbol.iterator")) : "@@iterator";
-  function _settle$1(pact, state, value) {
+  var _iteratorSymbol$2 = typeof Symbol !== "undefined" ? Symbol.iterator || (Symbol.iterator = Symbol("Symbol.iterator")) : "@@iterator";
+  function _settle$2(pact, state, value) {
     if (!pact.s) {
-      if (value instanceof _Pact$1) {
+      if (value instanceof _Pact$2) {
         if (value.s) {
           if (state & 1) {
             state = value.s;
           }
           value = value.v;
         } else {
-          value.o = _settle$1.bind(null, pact, state);
+          value.o = _settle$2.bind(null, pact, state);
           return;
         }
       }
       if (value && value.then) {
-        value.then(_settle$1.bind(null, pact, state), _settle$1.bind(null, pact, 2));
+        value.then(_settle$2.bind(null, pact, state), _settle$2.bind(null, pact, 2));
         return;
       }
       pact.s = state;
@@ -14503,7 +14503,7 @@
       }
     }
   }
-  var _Pact$1 = /*#__PURE__*/function () {
+  var _Pact$2 = /*#__PURE__*/function () {
     function _Pact() {}
     _Pact.prototype.then = function (onFulfilled, onRejected) {
       var result = new _Pact();
@@ -14512,9 +14512,9 @@
         var callback = state & 1 ? onFulfilled : onRejected;
         if (callback) {
           try {
-            _settle$1(result, 1, callback(this.v));
+            _settle$2(result, 1, callback(this.v));
           } catch (e) {
-            _settle$1(result, 2, e);
+            _settle$2(result, 2, e);
           }
           return result;
         } else {
@@ -14525,24 +14525,24 @@
         try {
           var value = _this.v;
           if (_this.s & 1) {
-            _settle$1(result, 1, onFulfilled ? onFulfilled(value) : value);
+            _settle$2(result, 1, onFulfilled ? onFulfilled(value) : value);
           } else if (onRejected) {
-            _settle$1(result, 1, onRejected(value));
+            _settle$2(result, 1, onRejected(value));
           } else {
-            _settle$1(result, 2, value);
+            _settle$2(result, 2, value);
           }
         } catch (e) {
-          _settle$1(result, 2, e);
+          _settle$2(result, 2, e);
         }
       };
       return result;
     };
     return _Pact;
   }();
-  function _isSettledPact$1(thenable) {
-    return thenable instanceof _Pact$1 && thenable.s & 1;
+  function _isSettledPact$2(thenable) {
+    return thenable instanceof _Pact$2 && thenable.s & 1;
   }
-  function _forTo$1(array, body, check) {
+  function _forTo$2(array, body, check) {
     var i = -1,
       pact,
       reject;
@@ -14551,21 +14551,21 @@
         while (++i < array.length && (!check || !check())) {
           result = body(i);
           if (result && result.then) {
-            if (_isSettledPact$1(result)) {
+            if (_isSettledPact$2(result)) {
               result = result.v;
             } else {
-              result.then(_cycle, reject || (reject = _settle$1.bind(null, pact = new _Pact$1(), 2)));
+              result.then(_cycle, reject || (reject = _settle$2.bind(null, pact = new _Pact$2(), 2)));
               return;
             }
           }
         }
         if (pact) {
-          _settle$1(pact, 1, result);
+          _settle$2(pact, 1, result);
         } else {
           pact = result;
         }
       } catch (e) {
-        _settle$1(pact || (pact = new _Pact$1()), 2, e);
+        _settle$2(pact || (pact = new _Pact$2()), 2, e);
       }
     }
     _cycle();
@@ -14584,7 +14584,7 @@
           _exit = 1;
           return;
         }
-        var _temp = _forOf$1(Array.from(element.children).sort(sort), function (child) {
+        var _temp = _forOf$2(Array.from(element.children).sort(sort), function (child) {
           return Promise.resolve(walk(child, callback, {
             sort: sort
           })).then(function () {});
@@ -14595,9 +14595,9 @@
       return Promise.reject(e);
     }
   };
-  function _forOf$1(target, body, check) {
-    if (typeof target[_iteratorSymbol$1] === "function") {
-      var iterator = target[_iteratorSymbol$1](),
+  function _forOf$2(target, body, check) {
+    if (typeof target[_iteratorSymbol$2] === "function") {
+      var iterator = target[_iteratorSymbol$2](),
         step,
         pact,
         reject;
@@ -14606,21 +14606,21 @@
           while (!(step = iterator.next()).done && (!check || !check())) {
             result = body(step.value);
             if (result && result.then) {
-              if (_isSettledPact$1(result)) {
+              if (_isSettledPact$2(result)) {
                 result = result.v;
               } else {
-                result.then(_cycle, reject || (reject = _settle$1.bind(null, pact = new _Pact$1(), 2)));
+                result.then(_cycle, reject || (reject = _settle$2.bind(null, pact = new _Pact$2(), 2)));
                 return;
               }
             }
           }
           if (pact) {
-            _settle$1(pact, 1, result);
+            _settle$2(pact, 1, result);
           } else {
             pact = result;
           }
         } catch (e) {
-          _settle$1(pact || (pact = new _Pact$1()), 2, e);
+          _settle$2(pact || (pact = new _Pact$2()), 2, e);
         }
       }
       _cycle();
@@ -14651,7 +14651,7 @@
     for (var i = 0; i < target.length; i++) {
       values.push(target[i]);
     }
-    return _forTo$1(values, function (i) {
+    return _forTo$2(values, function (i) {
       return body(values[i]);
     }, check);
   }
@@ -14780,21 +14780,226 @@
     };
   });
 
-  /* global XMLSerializer, btoa */
+  /* global FileReader, XMLSerializer, btoa, XMLHttpRequest */
+  const _iteratorSymbol$1 = typeof Symbol !== "undefined" ? Symbol.iterator || (Symbol.iterator = Symbol("Symbol.iterator")) : "@@iterator";
+  function _settle$1(pact, state, value) {
+    if (!pact.s) {
+      if (value instanceof _Pact$1) {
+        if (value.s) {
+          if (state & 1) {
+            state = value.s;
+          }
+          value = value.v;
+        } else {
+          value.o = _settle$1.bind(null, pact, state);
+          return;
+        }
+      }
+      if (value && value.then) {
+        value.then(_settle$1.bind(null, pact, state), _settle$1.bind(null, pact, 2));
+        return;
+      }
+      pact.s = state;
+      pact.v = value;
+      var observer = pact.o;
+      if (observer) {
+        observer(pact);
+      }
+    }
+  }
+  var _Pact$1 = /*#__PURE__*/function () {
+    function _Pact() {}
+    _Pact.prototype.then = function (onFulfilled, onRejected) {
+      var result = new _Pact();
+      var state = this.s;
+      if (state) {
+        var callback = state & 1 ? onFulfilled : onRejected;
+        if (callback) {
+          try {
+            _settle$1(result, 1, callback(this.v));
+          } catch (e) {
+            _settle$1(result, 2, e);
+          }
+          return result;
+        } else {
+          return this;
+        }
+      }
+      this.o = function (_this) {
+        try {
+          var value = _this.v;
+          if (_this.s & 1) {
+            _settle$1(result, 1, onFulfilled ? onFulfilled(value) : value);
+          } else if (onRejected) {
+            _settle$1(result, 1, onRejected(value));
+          } else {
+            _settle$1(result, 2, value);
+          }
+        } catch (e) {
+          _settle$1(result, 2, e);
+        }
+      };
+      return result;
+    };
+    return _Pact;
+  }();
+  function _isSettledPact$1(thenable) {
+    return thenable instanceof _Pact$1 && thenable.s & 1;
+  }
+  function _forTo$1(array, body, check) {
+    var i = -1,
+      pact,
+      reject;
+    function _cycle(result) {
+      try {
+        while (++i < array.length && (!check || !check())) {
+          result = body(i);
+          if (result && result.then) {
+            if (_isSettledPact$1(result)) {
+              result = result.v;
+            } else {
+              result.then(_cycle, reject || (reject = _settle$1.bind(null, pact = new _Pact$1(), 2)));
+              return;
+            }
+          }
+        }
+        if (pact) {
+          _settle$1(pact, 1, result);
+        } else {
+          pact = result;
+        }
+      } catch (e) {
+        _settle$1(pact || (pact = new _Pact$1()), 2, e);
+      }
+    }
+    _cycle();
+    return pact;
+  }
+  function _forOf$1(target, body, check) {
+    if (typeof target[_iteratorSymbol$1] === "function") {
+      var _cycle = function _cycle(result) {
+        try {
+          while (!(step = iterator.next()).done && (!check || !check())) {
+            result = body(step.value);
+            if (result && result.then) {
+              if (_isSettledPact$1(result)) {
+                result = result.v;
+              } else {
+                result.then(_cycle, reject || (reject = _settle$1.bind(null, pact = new _Pact$1(), 2)));
+                return;
+              }
+            }
+          }
+          if (pact) {
+            _settle$1(pact, 1, result);
+          } else {
+            pact = result;
+          }
+        } catch (e) {
+          _settle$1(pact || (pact = new _Pact$1()), 2, e);
+        }
+      };
+      var iterator = target[_iteratorSymbol$1](),
+        step,
+        pact,
+        reject;
+      _cycle();
+      if (iterator["return"]) {
+        var _fixup = function _fixup(value) {
+          try {
+            if (!step.done) {
+              iterator["return"]();
+            }
+          } catch (e) {}
+          return value;
+        };
+        if (pact && pact.then) {
+          return pact.then(_fixup, function (e) {
+            throw _fixup(e);
+          });
+        }
+        _fixup();
+      }
+      return pact;
+    }
+    // No support for Symbol.iterator
+    if (!("length" in target)) {
+      throw new TypeError("Object is not iterable");
+    }
+    // Handle live collections properly
+    var values = [];
+    for (var i = 0; i < target.length; i++) {
+      values.push(target[i]);
+    }
+    return _forTo$1(values, function (i) {
+      return body(values[i]);
+    }, check);
+  }
   var svg = (function (_ref) {
-    return function (element, _ref2) {
+    var cache = _ref.cache;
+    return function (element, _ref2, _temp5) {
       var x = _ref2.x,
         y = _ref2.y,
         width = _ref2.width,
         height = _ref2.height;
+      var _ref3 = _temp5 === void 0 ? {} : _temp5,
+        _ref3$rasterizeNested = _ref3.rasterizeNestedSVG,
+        rasterizeNestedSVG = _ref3$rasterizeNested === void 0 ? true : _ref3$rasterizeNested;
       try {
-        return Promise.resolve($('image', {
-          x: x,
-          y: y,
-          width: width,
-          height: height,
-          href: 'data:image/svg+xml;base64,' + btoa(new XMLSerializer().serializeToString(element))
-        }));
+        var _temp4 = function _temp4() {
+          return rasterizeNestedSVG ? $('image', {
+            x: x,
+            y: y,
+            width: width,
+            height: height,
+            href: 'data:image/svg+xml;base64,' + btoa(new XMLSerializer().serializeToString(element))
+          }) : function () {
+            var svg = $('svg', {
+              x: x,
+              y: y,
+              width: width,
+              height: height,
+              viewbox: "0 0 " + width + " " + height
+            });
+            svg.innerHTML = element.innerHTML;
+            return svg;
+          }();
+        };
+        var _temp3 = _forOf$1(element.querySelectorAll('image[href]'), function (image) {
+          function _temp2() {
+            image.setAttribute('href', cache.get(src));
+          }
+          var src = image.getAttribute('href');
+          var _temp = function () {
+            if (!cache.has(src)) {
+              // Fetch blob from image src
+              return Promise.resolve(new Promise(function (resolve) {
+                var request = new XMLHttpRequest();
+                request.open('GET', src, true);
+                request.responseType = 'blob';
+                request.onload = function () {
+                  return resolve(request.response);
+                };
+                request.send();
+              })).then(function (blob) {
+                // Convert blob to dataURL using the FileReader API
+                return Promise.resolve(new Promise(function (resolve) {
+                  var reader = new FileReader();
+                  reader.onload = function (e) {
+                    return resolve(e.target.result);
+                  };
+                  reader.readAsDataURL(blob);
+                })).then(function (dataURL) {
+                  // Cache dataURL
+                  cache.set(src, dataURL);
+                });
+              });
+            }
+          }();
+          return _temp && _temp.then ? _temp.then(_temp2) : _temp2(_temp);
+        });
+        // Convert all image to dataURL to maximizime compatibility
+        return Promise.resolve(_temp3 && _temp3.then ? _temp3.then(_temp4) : _temp4(_temp3));
       } catch (e) {
         return Promise.reject(e);
       }
@@ -14841,7 +15046,9 @@
           }, g);
         };
         if (!string) return Promise.resolve();
-        var g = $('g');
+        var g = $('g', {
+          "class": 'text-fragment'
+        });
 
         // Find font
         var font = fonts.find(matchFont(style));
@@ -15086,15 +15293,21 @@
       ignore = _ref$ignore === void 0 ? '' : _ref$ignore,
       _ref$fonts = _ref.fonts,
       fonts = _ref$fonts === void 0 ? [] : _ref$fonts;
+    var cache = new Map();
+
     // Init curried renderers
     var renderers = {};
     for (var k in RENDERERS) {
       renderers[k] = RENDERERS[k]({
         debug: debug,
-        fonts: fonts
+        fonts: fonts,
+        cache: cache
       });
     }
     return {
+      get cache() {
+        return cache;
+      },
       // Preload all fonts before resolving
       preload: function preload() {
         try {
@@ -15115,14 +15328,18 @@
         }
       },
       // Clear cache and delete all resources
-      unload: function unload() {
+      destroy: function destroy() {
+        cache.clear();
         for (var _iterator = _createForOfIteratorHelperLoose(fonts), _step; !(_step = _iterator()).done;) {
           var font = _step.value;
           delete font.opentype;
         }
       },
       // Render the HTML container as a shadow SVG
-      render: function render(container) {
+      render: function render(container, options, transform) {
+        if (options === void 0) {
+          options = {};
+        }
         try {
           var viewBox = container.getBoundingClientRect();
 
@@ -15143,21 +15360,22 @@
             try {
               var _renderers$element$ta;
               if (ignore && element !== container && element.matches(ignore)) return Promise.resolve();
-
-              // TODO opacity
               var style = window.getComputedStyle(element);
               var _element$getBoundingC = element.getBoundingClientRect(),
                 x = _element$getBoundingC.x,
                 y = _element$getBoundingC.y,
                 width = _element$getBoundingC.width,
                 height = _element$getBoundingC.height;
+              if (element instanceof window.HTMLElement) {
+                // TODO opacity
 
-              // Handle CSS clip-path property
-              var clipPathValue = style.getPropertyValue('clip-path');
-              if (clipPathValue !== 'none') {
-                parent = $('g', null, svg);
-                // WARNING: CSS clip-path implementation is not done yet on arnaudjuracek/svg-to-pdf
-                parent.setAttribute('style', "clip-path: " + clipPathValue);
+                // Handle CSS clip-path property
+                var clipPathValue = style.getPropertyValue('clip-path');
+                if (clipPathValue !== 'none') {
+                  parent = $('g', null, svg);
+                  // WARNING: CSS clip-path implementation is not done yet on arnaudjuracek/svg-to-pdf
+                  parent.setAttribute('style', "clip-path: " + clipPathValue.replace(/"/g, "'"));
+                }
               }
 
               // Render element
@@ -15168,53 +15386,76 @@
                 width: width,
                 height: height,
                 style: style
-              })).then(function (rendered) {
-                if (rendered) parent.appendChild(rendered);
+              }, options)).then(function (rendered) {
+                function _temp10() {
+                  if (rendered) parent.appendChild(rendered);
 
-                // Render text nodes inside the element
-                var _temp4 = function () {
-                  if (element.innerText) {
-                    return _forOf(element.childNodes, function (node) {
-                      if (node.nodeType !== Node.TEXT_NODE) return;
-                      if (!node.textContent.length) return;
-
-                      // Text interface does not provide a .innerText method, which would be
-                      // more appropriate than textContent as it skips non-rendered whitespaces
-                      // Splitting white-space leading Text trick the browser to recompute
-                      // the layout itself, dealing with implicit space between adjacent nodes
-                      if (/^\s/.test(node.textContent)) {
-                        node.splitText(1);
-                        return;
-                      }
-                      return _forOf(getClientRects(node), function (_ref2) {
-                        var rect = _ref2.rect,
-                          fragment = _ref2.fragment;
-                        var _temp3 = _catch(function () {
-                          return Promise.resolve(renderers.text(fragment.textContent.trimEnd(), {
-                            x: rect.x - viewBox.x,
-                            y: rect.y - viewBox.y,
-                            width: rect.width,
-                            height: rect.height,
-                            style: style
-                          })).then(function (text) {
-                            if (text) parent.appendChild(text);
-                          });
-                        }, function (error) {
-                          // TODO[improve] error handling
-                          console.warn(new Error("Rendering failed for the following text: '" + fragment.textContent + "'", {
-                            cause: error
-                          }));
-                          console.warn(error);
-                        });
-                        if (_temp3 && _temp3.then) return _temp3.then(function () {});
+                  // Render text nodes inside the element
+                  var _temp8 = function () {
+                    if (element.innerText && element.childNodes.length) {
+                      var _temp7 = function _temp7() {
+                        if (_g.children.length) parent.appendChild(_g);
+                      };
+                      var _g = $('g', {
+                        "class": 'text'
                       });
-                    });
-                  }
-                }();
-                return _temp4 && _temp4.then ? _temp4.then(function () {
+                      var _temp6 = _forOf(element.childNodes, function (node) {
+                        if (node.nodeType !== Node.TEXT_NODE) return;
+                        if (!node.textContent.length) return;
+
+                        // Text interface does not provide a .innerText method, which would be
+                        // more appropriate than textContent as it skips non-rendered whitespaces
+                        // Splitting white-space leading Text trick the browser to recompute
+                        // the layout itself, dealing with implicit space between adjacent nodes
+                        if (/^\s/.test(node.textContent)) {
+                          node.splitText(1);
+                          return;
+                        }
+                        return _forOf(getClientRects(node), function (_ref2) {
+                          var rect = _ref2.rect,
+                            fragment = _ref2.fragment;
+                          var _temp5 = _catch(function () {
+                            return Promise.resolve(renderers.text(fragment.textContent.trimEnd(), {
+                              x: rect.x - viewBox.x,
+                              y: rect.y - viewBox.y,
+                              width: rect.width,
+                              height: rect.height,
+                              style: style
+                            }, options)).then(function (text) {
+                              function _temp4() {
+                                if (text) _g.appendChild(text);
+                              }
+                              var _temp3 = function () {
+                                if (transform) return Promise.resolve(transform(element, text)).then(function (_transform2) {
+                                  text = _transform2;
+                                });
+                              }();
+                              return _temp3 && _temp3.then ? _temp3.then(_temp4) : _temp4(_temp3);
+                            });
+                          }, function (error) {
+                            // TODO[improve] error handling
+                            console.warn(new Error("Rendering failed for the following text: '" + fragment.textContent + "'", {
+                              cause: error
+                            }));
+                            console.warn(error);
+                          });
+                          if (_temp5 && _temp5.then) return _temp5.then(function () {});
+                        });
+                      });
+                      return _temp6 && _temp6.then ? _temp6.then(_temp7) : _temp7(_temp6);
+                    }
+                  }();
                   // Continue walking
-                  return true;
-                }) : true;
+                  return _temp8 && _temp8.then ? _temp8.then(function () {
+                    return true;
+                  }) : true;
+                }
+                var _temp9 = function () {
+                  if (transform) return Promise.resolve(transform(element, rendered)).then(function (_transform) {
+                    rendered = _transform;
+                  });
+                }();
+                return _temp9 && _temp9.then ? _temp9.then(_temp10) : _temp10(_temp9);
               });
             } catch (e) {
               return Promise.reject(e);
