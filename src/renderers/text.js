@@ -13,7 +13,7 @@ export default ({
 }) => async (string, { x, y, width, height, style }) => {
   if (!string) return
 
-  const g = $('g')
+  const g = $('g', { class: 'text-fragment' })
 
   // Find font
   const font = fonts.find(matchFont(style))

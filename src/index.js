@@ -91,7 +91,9 @@ export default function ({
         if (rendered) parent.appendChild(rendered)
 
         // Render text nodes inside the element
-        if (element.innerText) {
+        if (element.innerText && element.childNodes.length) {
+          const g = $('g', { class: 'text' })
+
           for (const node of element.childNodes) {
             if (node.nodeType !== Node.TEXT_NODE) continue
             if (!node.textContent.length) continue
@@ -116,7 +118,7 @@ export default function ({
                 }, options)
 
                 if (transform) text = await transform(element, text)
-                if (text) parent.appendChild(text)
+                if (text) g.appendChild(text)
               } catch (error) {
                 // TODO[improve] error handling
                 console.warn(new Error(`Rendering failed for the following text: '${fragment.textContent}'`, { cause: error }))
@@ -124,6 +126,8 @@ export default function ({
               }
             }
           }
+
+          if (g.children.length) parent.appendChild(g)
         }
 
         // Continue walking
