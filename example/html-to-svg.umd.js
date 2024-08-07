@@ -3,6 +3,20 @@
   typeof define === 'function' && define.amd ? define(factory) :
   (global = global || self, global.HtmlToSvg = factory());
 })(this, (function () {
+  function _extends() {
+    _extends = Object.assign ? Object.assign.bind() : function (target) {
+      for (var i = 1; i < arguments.length; i++) {
+        var source = arguments[i];
+        for (var key in source) {
+          if (Object.prototype.hasOwnProperty.call(source, key)) {
+            target[key] = source[key];
+          }
+        }
+      }
+      return target;
+    };
+    return _extends.apply(this, arguments);
+  }
   function _unsupportedIterableToArray(o, minLen) {
     if (!o) return;
     if (typeof o === "string") return _arrayLikeToArray(o, minLen);
@@ -14724,6 +14738,14 @@
     };
   });
 
+  function isTransparent(color) {
+    if (!color || color === 'none' || color === 'transparent') return true;
+    if (color.startsWith('rgba')) {
+      var rgba = color.match(/[\d.]+/g);
+      if (rgba[3] === '0') return true;
+    }
+    return false;
+  }
   var div = (function (_ref) {
     return function (element, _ref2) {
       var x = _ref2.x,
@@ -14735,23 +14757,33 @@
         if (!width || !height) return Promise.resolve();
 
         // TODO background-image
-        // TODO border
         var backgroundColor = style.getPropertyValue('background-color');
 
         // Skip visually empty blocks
-        if (!backgroundColor || backgroundColor === 'none' || backgroundColor === 'transparent') return Promise.resolve();
-        if (backgroundColor.startsWith('rgba')) {
-          var rgba = backgroundColor.match(/[\d.]+/g);
-          if (rgba[3] === '0') return Promise.resolve();
+        if (isTransparent(backgroundColor)) return Promise.resolve();
+
+        // TODO SVG stroke is drawn on center, CSS stroke is drawn on outside
+        // TODO border-top|bottom|left|right
+        // TODO stroke-style
+        var stroke = {
+          stroke: 'none',
+          'stroke-width': 1
+        };
+        var borderColor = style.getPropertyValue('border-color');
+        var borderStyle = style.getPropertyValue('border-style');
+        if (borderStyle !== 'none' && !isTransparent(borderColor)) {
+          stroke.stroke = borderColor;
+          stroke['stroke-width'] = style.getPropertyValue('border-width');
         }
-        return Promise.resolve($('rect', {
+        return Promise.resolve($('rect', _extends({
           x: x,
           y: y,
           width: width,
-          height: height,
+          height: height
+        }, stroke, {
           fill: backgroundColor,
           rx: parseInt(style.getPropertyValue('border-radius')) || null
-        }));
+        })));
       } catch (e) {
         return Promise.reject(e);
       }
@@ -15021,19 +15053,21 @@
   var text = (function (_ref2) {
     var debug = _ref2.debug,
       fonts = _ref2.fonts;
-    return function (string, _ref3) {
+    return function (string, _ref3, _ref4) {
       var x = _ref3.x,
         y = _ref3.y,
         width = _ref3.width,
         height = _ref3.height,
         style = _ref3.style;
+      var _ref4$splitText = _ref4.splitText,
+        splitText = _ref4$splitText === void 0 ? false : _ref4$splitText;
       try {
         var line = function line(title, v, _temp2) {
-          var _ref4 = _temp2 === void 0 ? {} : _temp2,
-            _ref4$orientation = _ref4.orientation,
-            orientation = _ref4$orientation === void 0 ? 'horizontal' : _ref4$orientation,
-            _ref4$stroke = _ref4.stroke,
-            stroke = _ref4$stroke === void 0 ? 'black' : _ref4$stroke;
+          var _ref5 = _temp2 === void 0 ? {} : _temp2,
+            _ref5$orientation = _ref5.orientation,
+            orientation = _ref5$orientation === void 0 ? 'horizontal' : _ref5$orientation,
+            _ref5$stroke = _ref5.stroke,
+            stroke = _ref5$stroke === void 0 ? 'black' : _ref5$stroke;
           return debug && $('line', {
             title: title,
             'data-value': v,
@@ -15079,15 +15113,20 @@
         line('leading', leading, {
           stroke: '#4b96ff'
         });
-        if (letterSpacing !== 'normal') {
-          // Render letter by letter in case of non-default letter-spacing
+        if (letterSpacing !== 'normal' || splitText) {
+          var ls = letterSpacing === 'normal' ? 0 : parseFloat(letterSpacing);
+
+          // Render letter by letter in case of non-default letter-spacing or explicit split
           for (var _iterator = _createForOfIteratorHelperLoose(string), _step; !(_step = _iterator()).done;) {
             var c = _step.value;
-            $('path', {
-              d: font.opentype.getPath(c, x, y + leading, fontSize).toPathData(3),
-              fill: style.getPropertyValue('color')
-            }, g);
-            x += font.opentype.getAdvanceWidth(c, fontSize) + parseFloat(letterSpacing);
+            if (!c.match(/\s/)) {
+              // Do not render spaces
+              $('path', {
+                d: font.opentype.getPath(c, x, y + leading, fontSize).toPathData(3),
+                fill: style.getPropertyValue('color')
+              }, g);
+            }
+            x += font.opentype.getAdvanceWidth(c, fontSize) + ls;
           }
         } else {
           // Render string
