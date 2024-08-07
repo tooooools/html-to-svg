@@ -5,7 +5,7 @@ function isTransparent (color) {
 
   if (color.startsWith('rgba')) {
     const rgba = color.match(/[\d.]+/g)
-    if (rgba[3] === '0') return false
+    if (rgba[3] === '0') return true
   }
 
   return false
