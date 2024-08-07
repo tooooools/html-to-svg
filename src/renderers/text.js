@@ -7,10 +7,9 @@ const matchFont = s => ({ family, style = 'normal', weight = '400' } = {}) =>
     style === (s.getPropertyValue('font-style') ?? 'normal') &&
     weight === (s.getPropertyValue('font-weight') ?? '400')
 
-export default ({
-  debug,
-  fonts
-}) => async (string, { x, y, width, height, style }) => {
+export default ({ debug, fonts }) => async (string, { x, y, width, height, style }, {
+  splitText = false
+}) => {
   if (!string) return
 
   const g = $('g', { class: 'text-fragment' })
@@ -37,14 +36,19 @@ export default ({
   line('end', width, { orientation: 'vertical', stroke: 'red' })
   line('leading', leading, { stroke: '#4b96ff' })
 
-  if (letterSpacing !== 'normal') {
-    // Render letter by letter in case of non-default letter-spacing
+  if (letterSpacing !== 'normal' || splitText) {
+    const ls = letterSpacing === 'normal' ? 0 : parseFloat(letterSpacing)
+
+    // Render letter by letter in case of non-default letter-spacing or explicit split
     for (const c of string) {
-      $('path', {
-        d: font.opentype.getPath(c, x, y + leading, fontSize).toPathData(3),
-        fill: style.getPropertyValue('color')
-      }, g)
-      x += font.opentype.getAdvanceWidth(c, fontSize) + parseFloat(letterSpacing)
+      if (!c.match(/\s/)) { // Do not render spaces
+        $('path', {
+          d: font.opentype.getPath(c, x, y + leading, fontSize).toPathData(3),
+          fill: style.getPropertyValue('color')
+        }, g)
+      }
+
+      x += font.opentype.getAdvanceWidth(c, fontSize) + ls
     }
   } else {
     // Render string

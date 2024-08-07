@@ -82,7 +82,8 @@ await renderer.preload()
   
 // Render a DOMElement
 const options = { 
-  rasterizeNestedSVG: true // Convert <svg> into <image>
+  rasterizeNestedSVG: true, // Convert <svg> into <image>
+  splitText: false // Force text fragments to be renderered letter by letter
 }
 
 const transform = async (from, to) => to
