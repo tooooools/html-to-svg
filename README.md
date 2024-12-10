@@ -147,6 +147,7 @@ $ yarn version # build module, example, and publish to npm
 ## Credits 
 
 - [Opentype.js](https://github.com/opentypejs/opentype.js)
+- [Gradient Parser](https://github.com/rafaelcaricio/gradient-parser)
 - [Ahem](https://www.w3.org/Style/CSS/Test/Fonts/Ahem/)
 
 ## License

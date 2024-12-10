@@ -1,4 +1,4 @@
-export default function (name, props = {}, parent) {
+export default function (name, props = {}, parent, children = []) {
   const NS = 'http://www.w3.org/2000/svg'
 
   const element = document.createElementNS(NS, name)
@@ -9,5 +9,7 @@ export default function (name, props = {}, parent) {
   }
 
   if (parent) parent.appendChild(element)
+
+  for (const child of children ?? []) element.appendChild(child)
   return element
 }

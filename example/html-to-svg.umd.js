@@ -2766,7 +2766,7 @@
       }) || [];
   };
 
-  var parse = {
+  var parse$1 = {
       getByte: getByte,
       getCard8: getByte,
       getUShort: getUShort,
@@ -2821,10 +2821,10 @@
 
       // The "unrolled" mapping from character codes to glyph indices.
       cmap.glyphIndexMap = {};
-      var endCountParser = new parse.Parser(data, start + offset + 14);
-      var startCountParser = new parse.Parser(data, start + offset + 16 + segCount * 2);
-      var idDeltaParser = new parse.Parser(data, start + offset + 16 + segCount * 4);
-      var idRangeOffsetParser = new parse.Parser(data, start + offset + 16 + segCount * 6);
+      var endCountParser = new parse$1.Parser(data, start + offset + 14);
+      var startCountParser = new parse$1.Parser(data, start + offset + 16 + segCount * 2);
+      var idDeltaParser = new parse$1.Parser(data, start + offset + 16 + segCount * 4);
+      var idRangeOffsetParser = new parse$1.Parser(data, start + offset + 16 + segCount * 6);
       var glyphIndexOffset = start + offset + 16 + segCount * 8;
       for (var i = 0; i < segCount - 1; i += 1) {
           var glyphIndex = (void 0);
@@ -2843,7 +2843,7 @@
 
                   // Then add the character index of the current segment, multiplied by 2 for USHORTs.
                   glyphIndexOffset += (c - startCount) * 2;
-                  glyphIndex = parse.getUShort(data, glyphIndexOffset);
+                  glyphIndex = parse$1.getUShort(data, glyphIndexOffset);
                   if (glyphIndex !== 0) {
                       glyphIndex = (glyphIndex + idDelta) & 0xFFFF;
                   }
@@ -2861,19 +2861,19 @@
   // This function returns a `CmapEncoding` object or null if no supported format could be found.
   function parseCmapTable(data, start) {
       var cmap = {};
-      cmap.version = parse.getUShort(data, start);
+      cmap.version = parse$1.getUShort(data, start);
       check.argument(cmap.version === 0, 'cmap table version should be 0.');
 
       // The cmap table can contain many sub-tables, each with their own format.
       // We're only interested in a "platform 0" (Unicode format) and "platform 3" (Windows format) table.
-      cmap.numTables = parse.getUShort(data, start + 2);
+      cmap.numTables = parse$1.getUShort(data, start + 2);
       var offset = -1;
       for (var i = cmap.numTables - 1; i >= 0; i -= 1) {
-          var platformId = parse.getUShort(data, start + 4 + (i * 8));
-          var encodingId = parse.getUShort(data, start + 4 + (i * 8) + 2);
+          var platformId = parse$1.getUShort(data, start + 4 + (i * 8));
+          var encodingId = parse$1.getUShort(data, start + 4 + (i * 8) + 2);
           if ((platformId === 3 && (encodingId === 0 || encodingId === 1 || encodingId === 10)) ||
               (platformId === 0 && (encodingId === 0 || encodingId === 1 || encodingId === 2 || encodingId === 3 || encodingId === 4))) {
-              offset = parse.getULong(data, start + 4 + (i * 8) + 4);
+              offset = parse$1.getULong(data, start + 4 + (i * 8) + 4);
               break;
           }
       }
@@ -2883,7 +2883,7 @@
           throw new Error('No valid cmap sub-tables found.');
       }
 
-      var p = new parse.Parser(data, start + offset);
+      var p = new parse$1.Parser(data, start + offset);
       cmap.format = p.parseUShort();
 
       if (cmap.format === 12) {
@@ -3933,15 +3933,15 @@
   function parseCFFIndex(data, start, conversionFn) {
       var offsets = [];
       var objects = [];
-      var count = parse.getCard16(data, start);
+      var count = parse$1.getCard16(data, start);
       var objectOffset;
       var endOffset;
       if (count !== 0) {
-          var offsetSize = parse.getByte(data, start + 2);
+          var offsetSize = parse$1.getByte(data, start + 2);
           objectOffset = start + ((count + 1) * offsetSize) + 2;
           var pos = start + 3;
           for (var i = 0; i < count + 1; i += 1) {
-              offsets.push(parse.getOffset(data, pos, offsetSize));
+              offsets.push(parse$1.getOffset(data, pos, offsetSize));
               pos += offsetSize;
           }
 
@@ -3952,7 +3952,7 @@
       }
 
       for (var i$1 = 0; i$1 < offsets.length - 1; i$1 += 1) {
-          var value = parse.getBytes(data, objectOffset + offsets[i$1], objectOffset + offsets[i$1 + 1]);
+          var value = parse$1.getBytes(data, objectOffset + offsets[i$1], objectOffset + offsets[i$1 + 1]);
           if (conversionFn) {
               value = conversionFn(value);
           }
@@ -3965,15 +3965,15 @@
 
   function parseCFFIndexLowMemory(data, start) {
       var offsets = [];
-      var count = parse.getCard16(data, start);
+      var count = parse$1.getCard16(data, start);
       var objectOffset;
       var endOffset;
       if (count !== 0) {
-          var offsetSize = parse.getByte(data, start + 2);
+          var offsetSize = parse$1.getByte(data, start + 2);
           objectOffset = start + ((count + 1) * offsetSize) + 2;
           var pos = start + 3;
           for (var i = 0; i < count + 1; i += 1) {
-              offsets.push(parse.getOffset(data, pos, offsetSize));
+              offsets.push(parse$1.getOffset(data, pos, offsetSize));
               pos += offsetSize;
           }
 
@@ -3986,14 +3986,14 @@
       return {offsets: offsets, startOffset: start, endOffset: endOffset};
   }
   function getCffIndexObject(i, offsets, data, start, conversionFn) {
-      var count = parse.getCard16(data, start);
+      var count = parse$1.getCard16(data, start);
       var objectOffset = 0;
       if (count !== 0) {
-          var offsetSize = parse.getByte(data, start + 2);
+          var offsetSize = parse$1.getByte(data, start + 2);
           objectOffset = start + ((count + 1) * offsetSize) + 2;
       }
 
-      var value = parse.getBytes(data, objectOffset + offsets[i], objectOffset + offsets[i + 1]);
+      var value = parse$1.getBytes(data, objectOffset + offsets[i], objectOffset + offsets[i + 1]);
       if (conversionFn) {
           value = conversionFn(value);
       }
@@ -4095,7 +4095,7 @@
   // A dictionary contains key-value pairs in a compact tokenized format.
   function parseCFFDict(data, start, size) {
       start = start !== undefined ? start : 0;
-      var parser = new parse.Parser(data, start);
+      var parser = new parse$1.Parser(data, start);
       var entries = [];
       var operands = [];
       size = size !== undefined ? size : data.length;
@@ -4179,10 +4179,10 @@
   // Parse the CFF header.
   function parseCFFHeader(data, start) {
       var header = {};
-      header.formatMajor = parse.getCard8(data, start);
-      header.formatMinor = parse.getCard8(data, start + 1);
-      header.size = parse.getCard8(data, start + 2);
-      header.offsetSize = parse.getCard8(data, start + 3);
+      header.formatMajor = parse$1.getCard8(data, start);
+      header.formatMinor = parse$1.getCard8(data, start + 1);
+      header.size = parse$1.getCard8(data, start + 2);
+      header.offsetSize = parse$1.getCard8(data, start + 3);
       header.startOffset = start;
       header.endOffset = start + 4;
       return header;
@@ -4294,7 +4294,7 @@
   function parseCFFCharset(data, start, nGlyphs, strings) {
       var sid;
       var count;
-      var parser = new parse.Parser(data, start);
+      var parser = new parse$1.Parser(data, start);
 
       // The .notdef glyph is not included, so subtract 1.
       nGlyphs -= 1;
@@ -4336,7 +4336,7 @@
   function parseCFFEncoding(data, start, charset) {
       var code;
       var enc = {};
-      var parser = new parse.Parser(data, start);
+      var parser = new parse$1.Parser(data, start);
       var format = parser.parseCard8();
       if (format === 0) {
           var nCodes = parser.parseCard8();
@@ -4788,7 +4788,7 @@
   function parseCFFFDSelect(data, start, nGlyphs, fdArrayCount) {
       var fdSelect = [];
       var fdIndex;
-      var parser = new parse.Parser(data, start);
+      var parser = new parse$1.Parser(data, start);
       var format = parser.parseCard8();
       if (format === 0) {
           // Simple list of nGlyphs elements
@@ -4834,9 +4834,9 @@
   function parseCFFTable(data, start, font, opt) {
       font.tables.cff = {};
       var header = parseCFFHeader(data, start);
-      var nameIndex = parseCFFIndex(data, header.endOffset, parse.bytesToString);
+      var nameIndex = parseCFFIndex(data, header.endOffset, parse$1.bytesToString);
       var topDictIndex = parseCFFIndex(data, nameIndex.endOffset);
-      var stringIndex = parseCFFIndex(data, topDictIndex.endOffset, parse.bytesToString);
+      var stringIndex = parseCFFIndex(data, topDictIndex.endOffset, parse$1.bytesToString);
       var globalSubrIndex = parseCFFIndex(data, stringIndex.endOffset);
       font.gsubrs = globalSubrIndex.objects;
       font.gsubrsBias = calcCFFSubroutineBias(font.gsubrs);
@@ -5207,7 +5207,7 @@
   // Parse the header `head` table
   function parseHeadTable(data, start) {
       var head = {};
-      var p = new parse.Parser(data, start);
+      var p = new parse$1.Parser(data, start);
       head.version = p.parseVersion();
       head.fontRevision = Math.round(p.parseFixed() * 1000) / 1000;
       head.checkSumAdjustment = p.parseULong();
@@ -5266,7 +5266,7 @@
   // Parse the horizontal header `hhea` table
   function parseHheaTable(data, start) {
       var hhea = {};
-      var p = new parse.Parser(data, start);
+      var p = new parse$1.Parser(data, start);
       hhea.version = p.parseVersion();
       hhea.ascender = p.parseShort();
       hhea.descender = p.parseShort();
@@ -5313,7 +5313,7 @@
   function parseHmtxTableAll(data, start, numMetrics, numGlyphs, glyphs) {
       var advanceWidth;
       var leftSideBearing;
-      var p = new parse.Parser(data, start);
+      var p = new parse$1.Parser(data, start);
       for (var i = 0; i < numGlyphs; i += 1) {
           // If the font is monospaced, only one entry is needed. This last entry applies to all subsequent glyphs.
           if (i < numMetrics) {
@@ -5332,7 +5332,7 @@
 
       var advanceWidth;
       var leftSideBearing;
-      var p = new parse.Parser(data, start);
+      var p = new parse$1.Parser(data, start);
       for (var i = 0; i < numGlyphs; i += 1) {
           // If the font is monospaced, only one entry is needed. This last entry applies to all subsequent glyphs.
           if (i < numMetrics) {
@@ -5398,7 +5398,7 @@
   }
 
   function parseLtagTable(data, start) {
-      var p = new parse.Parser(data, start);
+      var p = new parse$1.Parser(data, start);
       var tableVersion = p.parseULong();
       check.argument(tableVersion === 1, 'Unsupported ltag table version.');
       // The 'ltag' specification does not define any flags; skip the field.
@@ -5427,7 +5427,7 @@
   // Parse the maximum profile `maxp` table.
   function parseMaxpTable(data, start) {
       var maxp = {};
-      var p = new parse.Parser(data, start);
+      var p = new parse$1.Parser(data, start);
       maxp.version = p.parseVersion();
       maxp.numGlyphs = p.parseUShort();
       if (maxp.version === 1.0) {
@@ -6083,7 +6083,7 @@
   // ltag is the content of the `ltag' table, such as ['en', 'zh-Hans', 'de-CH-1904'].
   function parseNameTable(data, start, ltag) {
       var name = {};
-      var p = new parse.Parser(data, start);
+      var p = new parse$1.Parser(data, start);
       var format = p.parseUShort();
       var count = p.parseUShort();
       var stringOffset = p.offset + p.parseUShort();
@@ -6426,7 +6426,7 @@
   // Parse the OS/2 and Windows metrics `OS/2` table
   function parseOS2Table(data, start) {
       var os2 = {};
-      var p = new parse.Parser(data, start);
+      var p = new parse$1.Parser(data, start);
       os2.version = p.parseUShort();
       os2.xAvgCharWidth = p.parseShort();
       os2.usWeightClass = p.parseUShort();
@@ -6535,7 +6535,7 @@
   // Parse the PostScript `post` table
   function parsePostTable(data, start) {
       var post = {};
-      var p = new parse.Parser(data, start);
+      var p = new parse$1.Parser(data, start);
       post.version = p.parseVersion();
       post.italicAngle = p.parseFixed();
       post.underlinePosition = p.parseShort();
@@ -6925,7 +6925,7 @@
   // Parse the metadata `meta` table.
   // https://developer.apple.com/fonts/TrueType-Reference-Manual/RM06/Chap6meta.html
   function parseMetaTable(data, start) {
-      var p = new parse.Parser(data, start);
+      var p = new parse$1.Parser(data, start);
       var tableVersion = p.parseULong();
       check.argument(tableVersion === 1, 'Unsupported META table version.');
       p.parseULong(); // flags - currently unused and set to 0
@@ -8121,7 +8121,7 @@
 
   // Parse a TrueType glyph.
   function parseGlyph(glyph, data, start) {
-      var p = new parse.Parser(data, start);
+      var p = new parse$1.Parser(data, start);
       glyph.numberOfContours = p.parseShort();
       glyph._xMin = p.parseShort();
       glyph._yMin = p.parseShort();
@@ -13713,7 +13713,7 @@
 
   function parseFvarAxis(data, start, names) {
       var axis = {};
-      var p = new parse.Parser(data, start);
+      var p = new parse$1.Parser(data, start);
       axis.tag = p.parseTag();
       axis.minValue = p.parseFixed();
       axis.defaultValue = p.parseFixed();
@@ -13744,7 +13744,7 @@
 
   function parseFvarInstance(data, start, axes, names) {
       var inst = {};
-      var p = new parse.Parser(data, start);
+      var p = new parse$1.Parser(data, start);
       inst.name = names[p.parseUShort()] || {};
       p.skip('uShort', 1);  // reserved for flags; no values defined
 
@@ -13780,7 +13780,7 @@
   }
 
   function parseFvarTable(data, start, names) {
-      var p = new parse.Parser(data, start);
+      var p = new parse$1.Parser(data, start);
       var tableVersion = p.parseULong();
       check.argument(tableVersion === 0x00010000, 'Unsupported fvar table version.');
       var offsetToData = p.parseOffset16();
@@ -14040,7 +14040,7 @@
 
   // Parse the `kern` table which contains kerning pairs.
   function parseKernTable(data, start) {
-      var p = new parse.Parser(data, start);
+      var p = new parse$1.Parser(data, start);
       var tableVersion = p.parseUShort();
       if (tableVersion === 0) {
           return parseWindowsKernTable(p);
@@ -14062,7 +14062,7 @@
   // version where offsets are stored as uLongs. The `head` table specifies which version to use
   // (under indexToLocFormat).
   function parseLocaTable(data, start, numGlyphs, shortVersion) {
-      var p = new parse.Parser(data, start);
+      var p = new parse$1.Parser(data, start);
       var parseFn = shortVersion ? p.parseUShort : p.parseULong;
       // There is an extra entry after the last index element to compute the length of the last glyph.
       // That's why we use numGlyphs + 1.
@@ -14142,10 +14142,10 @@
       var tableEntries = [];
       var p = 12;
       for (var i = 0; i < numTables; i += 1) {
-          var tag = parse.getTag(data, p);
-          var checksum = parse.getULong(data, p + 4);
-          var offset = parse.getULong(data, p + 8);
-          var length = parse.getULong(data, p + 12);
+          var tag = parse$1.getTag(data, p);
+          var checksum = parse$1.getULong(data, p + 4);
+          var offset = parse$1.getULong(data, p + 8);
+          var length = parse$1.getULong(data, p + 12);
           tableEntries.push({tag: tag, checksum: checksum, offset: offset, length: length, compression: false});
           p += 16;
       }
@@ -14163,10 +14163,10 @@
       var tableEntries = [];
       var p = 44; // offset to the first table directory entry.
       for (var i = 0; i < numTables; i += 1) {
-          var tag = parse.getTag(data, p);
-          var offset = parse.getULong(data, p + 4);
-          var compLength = parse.getULong(data, p + 8);
-          var origLength = parse.getULong(data, p + 12);
+          var tag = parse$1.getTag(data, p);
+          var offset = parse$1.getULong(data, p + 4);
+          var compLength = parse$1.getULong(data, p + 8);
+          var origLength = parse$1.getULong(data, p + 12);
           var compression = (void 0);
           if (compLength < origLength) {
               compression = 'WOFF';
@@ -14235,17 +14235,17 @@
       var data = new DataView(buffer, 0);
       var numTables;
       var tableEntries = [];
-      var signature = parse.getTag(data, 0);
+      var signature = parse$1.getTag(data, 0);
       if (signature === String.fromCharCode(0, 1, 0, 0) || signature === 'true' || signature === 'typ1') {
           font.outlinesFormat = 'truetype';
-          numTables = parse.getUShort(data, 4);
+          numTables = parse$1.getUShort(data, 4);
           tableEntries = parseOpenTypeTableEntries(data, numTables);
       } else if (signature === 'OTTO') {
           font.outlinesFormat = 'cff';
-          numTables = parse.getUShort(data, 4);
+          numTables = parse$1.getUShort(data, 4);
           tableEntries = parseOpenTypeTableEntries(data, numTables);
       } else if (signature === 'wOFF') {
-          var flavor = parse.getTag(data, 4);
+          var flavor = parse$1.getTag(data, 4);
           if (flavor === String.fromCharCode(0, 1, 0, 0)) {
               font.outlinesFormat = 'truetype';
           } else if (flavor === 'OTTO') {
@@ -14254,7 +14254,7 @@
               throw new Error('Unsupported OpenType flavor ' + signature);
           }
 
-          numTables = parse.getUShort(data, 12);
+          numTables = parse$1.getUShort(data, 12);
           tableEntries = parseWOFFTableEntries(data, numTables);
       } else {
           throw new Error('Unsupported OpenType signature ' + signature);
@@ -14284,7 +14284,7 @@
                   break;
               case 'cvt ' :
                   table = uncompressTable(data, tableEntry);
-                  p = new parse.Parser(table.data, table.offset);
+                  p = new parse$1.Parser(table.data, table.offset);
                   font.tables.cvt = p.parseShortList(tableEntry.length / 2);
                   break;
               case 'fvar':
@@ -14292,7 +14292,7 @@
                   break;
               case 'fpgm' :
                   table = uncompressTable(data, tableEntry);
-                  p = new parse.Parser(table.data, table.offset);
+                  p = new parse$1.Parser(table.data, table.offset);
                   font.tables.fpgm = p.parseByteList(tableEntry.length);
                   break;
               case 'head':
@@ -14334,7 +14334,7 @@
                   break;
               case 'prep' :
                   table = uncompressTable(data, tableEntry);
-                  p = new parse.Parser(table.data, table.offset);
+                  p = new parse$1.Parser(table.data, table.offset);
                   font.tables.prep = p.parseByteList(tableEntry.length);
                   break;
               case 'glyf':
@@ -14485,7 +14485,7 @@
   	Glyph: Glyph,
   	Path: Path,
   	BoundingBox: BoundingBox,
-  	_parse: parse,
+  	_parse: parse$1,
   	parse: parseBuffer,
   	load: load,
   	loadSync: loadSync
@@ -14703,9 +14703,12 @@
     });
   }
 
-  function $ (name, props, parent) {
+  function $ (name, props, parent, children) {
     if (props === void 0) {
       props = {};
+    }
+    if (children === void 0) {
+      children = [];
     }
     var NS = 'http://www.w3.org/2000/svg';
     var element = document.createElementNS(NS, name);
@@ -14715,6 +14718,11 @@
       element.setAttribute(key, props[key]);
     }
     if (parent) parent.appendChild(element);
+    for (var _iterator = _createForOfIteratorHelperLoose((_children = children) != null ? _children : []), _step; !(_step = _iterator()).done;) {
+      var _children;
+      var child = _step.value;
+      element.appendChild(child);
+    }
     return element;
   }
 
@@ -14738,6 +14746,527 @@
     };
   });
 
+  // Copyright (c) 2014 Rafael Caricio. All rights reserved.
+  // Use of this source code is governed by a BSD-style license that can be
+  // found in the LICENSE file.
+
+  var GradientParser = (GradientParser || {});
+
+  GradientParser.stringify = (function() {
+
+    var visitor = {
+
+      'visit_linear-gradient': function(node) {
+        return visitor.visit_gradient(node);
+      },
+
+      'visit_repeating-linear-gradient': function(node) {
+        return visitor.visit_gradient(node);
+      },
+
+      'visit_radial-gradient': function(node) {
+        return visitor.visit_gradient(node);
+      },
+
+      'visit_repeating-radial-gradient': function(node) {
+        return visitor.visit_gradient(node);
+      },
+
+      'visit_gradient': function(node) {
+        var orientation = visitor.visit(node.orientation);
+        if (orientation) {
+          orientation += ', ';
+        }
+
+        return node.type + '(' + orientation + visitor.visit(node.colorStops) + ')';
+      },
+
+      'visit_shape': function(node) {
+        var result = node.value,
+            at = visitor.visit(node.at),
+            style = visitor.visit(node.style);
+
+        if (style) {
+          result += ' ' + style;
+        }
+
+        if (at) {
+          result += ' at ' + at;
+        }
+
+        return result;
+      },
+
+      'visit_default-radial': function(node) {
+        var result = '',
+            at = visitor.visit(node.at);
+
+        if (at) {
+          result += at;
+        }
+        return result;
+      },
+
+      'visit_extent-keyword': function(node) {
+        var result = node.value,
+            at = visitor.visit(node.at);
+
+        if (at) {
+          result += ' at ' + at;
+        }
+
+        return result;
+      },
+
+      'visit_position-keyword': function(node) {
+        return node.value;
+      },
+
+      'visit_position': function(node) {
+        return visitor.visit(node.value.x) + ' ' + visitor.visit(node.value.y);
+      },
+
+      'visit_%': function(node) {
+        return node.value + '%';
+      },
+
+      'visit_em': function(node) {
+        return node.value + 'em';
+      },
+
+      'visit_px': function(node) {
+        return node.value + 'px';
+      },
+
+      'visit_literal': function(node) {
+        return visitor.visit_color(node.value, node);
+      },
+
+      'visit_hex': function(node) {
+        return visitor.visit_color('#' + node.value, node);
+      },
+
+      'visit_rgb': function(node) {
+        return visitor.visit_color('rgb(' + node.value.join(', ') + ')', node);
+      },
+
+      'visit_rgba': function(node) {
+        return visitor.visit_color('rgba(' + node.value.join(', ') + ')', node);
+      },
+
+      'visit_color': function(resultColor, node) {
+        var result = resultColor,
+            length = visitor.visit(node.length);
+
+        if (length) {
+          result += ' ' + length;
+        }
+        return result;
+      },
+
+      'visit_angular': function(node) {
+        return node.value + 'deg';
+      },
+
+      'visit_directional': function(node) {
+        return 'to ' + node.value;
+      },
+
+      'visit_array': function(elements) {
+        var result = '',
+            size = elements.length;
+
+        elements.forEach(function(element, i) {
+          result += visitor.visit(element);
+          if (i < size - 1) {
+            result += ', ';
+          }
+        });
+
+        return result;
+      },
+
+      'visit': function(element) {
+        if (!element) {
+          return '';
+        }
+        var result = '';
+
+        if (element instanceof Array) {
+          return visitor.visit_array(element, result);
+        } else if (element.type) {
+          var nodeVisitor = visitor['visit_' + element.type];
+          if (nodeVisitor) {
+            return nodeVisitor(element);
+          } else {
+            throw Error('Missing visitor visit_' + element.type);
+          }
+        } else {
+          throw Error('Invalid node.');
+        }
+      }
+
+    };
+
+    return function(root) {
+      return visitor.visit(root);
+    };
+  })();
+
+  // Copyright (c) 2014 Rafael Caricio. All rights reserved.
+  // Use of this source code is governed by a BSD-style license that can be
+  // found in the LICENSE file.
+
+  var GradientParser = (GradientParser || {});
+
+  GradientParser.parse = (function() {
+
+    var tokens = {
+      linearGradient: /^(\-(webkit|o|ms|moz)\-)?(linear\-gradient)/i,
+      repeatingLinearGradient: /^(\-(webkit|o|ms|moz)\-)?(repeating\-linear\-gradient)/i,
+      radialGradient: /^(\-(webkit|o|ms|moz)\-)?(radial\-gradient)/i,
+      repeatingRadialGradient: /^(\-(webkit|o|ms|moz)\-)?(repeating\-radial\-gradient)/i,
+      sideOrCorner: /^to (left (top|bottom)|right (top|bottom)|left|right|top|bottom)/i,
+      extentKeywords: /^(closest\-side|closest\-corner|farthest\-side|farthest\-corner|contain|cover)/,
+      positionKeywords: /^(left|center|right|top|bottom)/i,
+      pixelValue: /^(-?(([0-9]*\.[0-9]+)|([0-9]+\.?)))px/,
+      percentageValue: /^(-?(([0-9]*\.[0-9]+)|([0-9]+\.?)))\%/,
+      emValue: /^(-?(([0-9]*\.[0-9]+)|([0-9]+\.?)))em/,
+      angleValue: /^(-?(([0-9]*\.[0-9]+)|([0-9]+\.?)))deg/,
+      startCall: /^\(/,
+      endCall: /^\)/,
+      comma: /^,/,
+      hexColor: /^\#([0-9a-fA-F]+)/,
+      literalColor: /^([a-zA-Z]+)/,
+      rgbColor: /^rgb/i,
+      rgbaColor: /^rgba/i,
+      number: /^(([0-9]*\.[0-9]+)|([0-9]+\.?))/
+    };
+
+    var input = '';
+
+    function error(msg) {
+      var err = new Error(input + ': ' + msg);
+      err.source = input;
+      throw err;
+    }
+
+    function getAST() {
+      var ast = matchListDefinitions();
+
+      if (input.length > 0) {
+        error('Invalid input not EOF');
+      }
+
+      return ast;
+    }
+
+    function matchListDefinitions() {
+      return matchListing(matchDefinition);
+    }
+
+    function matchDefinition() {
+      return matchGradient(
+              'linear-gradient',
+              tokens.linearGradient,
+              matchLinearOrientation) ||
+
+            matchGradient(
+              'repeating-linear-gradient',
+              tokens.repeatingLinearGradient,
+              matchLinearOrientation) ||
+
+            matchGradient(
+              'radial-gradient',
+              tokens.radialGradient,
+              matchListRadialOrientations) ||
+
+            matchGradient(
+              'repeating-radial-gradient',
+              tokens.repeatingRadialGradient,
+              matchListRadialOrientations);
+    }
+
+    function matchGradient(gradientType, pattern, orientationMatcher) {
+      return matchCall(pattern, function(captures) {
+
+        var orientation = orientationMatcher();
+        if (orientation) {
+          if (!scan(tokens.comma)) {
+            error('Missing comma before color stops');
+          }
+        }
+
+        return {
+          type: gradientType,
+          orientation: orientation,
+          colorStops: matchListing(matchColorStop)
+        };
+      });
+    }
+
+    function matchCall(pattern, callback) {
+      var captures = scan(pattern);
+
+      if (captures) {
+        if (!scan(tokens.startCall)) {
+          error('Missing (');
+        }
+
+        var result = callback(captures);
+
+        if (!scan(tokens.endCall)) {
+          error('Missing )');
+        }
+
+        return result;
+      }
+    }
+
+    function matchLinearOrientation() {
+      return matchSideOrCorner() ||
+        matchAngle();
+    }
+
+    function matchSideOrCorner() {
+      return match('directional', tokens.sideOrCorner, 1);
+    }
+
+    function matchAngle() {
+      return match('angular', tokens.angleValue, 1);
+    }
+
+    function matchListRadialOrientations() {
+      var radialOrientations,
+          radialOrientation = matchRadialOrientation(),
+          lookaheadCache;
+
+      if (radialOrientation) {
+        radialOrientations = [];
+        radialOrientations.push(radialOrientation);
+
+        lookaheadCache = input;
+        if (scan(tokens.comma)) {
+          radialOrientation = matchRadialOrientation();
+          if (radialOrientation) {
+            radialOrientations.push(radialOrientation);
+          } else {
+            input = lookaheadCache;
+          }
+        }
+      }
+
+      return radialOrientations;
+    }
+
+    function matchRadialOrientation() {
+      var radialType = matchCircle() ||
+        matchEllipse();
+
+      if (radialType) {
+        radialType.at = matchAtPosition();
+      } else {
+        var extent = matchExtentKeyword();
+        if (extent) {
+          radialType = extent;
+          var positionAt = matchAtPosition();
+          if (positionAt) {
+            radialType.at = positionAt;
+          }
+        } else {
+          var defaultPosition = matchPositioning();
+          if (defaultPosition) {
+            radialType = {
+              type: 'default-radial',
+              at: defaultPosition
+            };
+          }
+        }
+      }
+
+      return radialType;
+    }
+
+    function matchCircle() {
+      var circle = match('shape', /^(circle)/i, 0);
+
+      if (circle) {
+        circle.style = matchLength() || matchExtentKeyword();
+      }
+
+      return circle;
+    }
+
+    function matchEllipse() {
+      var ellipse = match('shape', /^(ellipse)/i, 0);
+
+      if (ellipse) {
+        ellipse.style =  matchDistance() || matchExtentKeyword();
+      }
+
+      return ellipse;
+    }
+
+    function matchExtentKeyword() {
+      return match('extent-keyword', tokens.extentKeywords, 1);
+    }
+
+    function matchAtPosition() {
+      if (match('position', /^at/, 0)) {
+        var positioning = matchPositioning();
+
+        if (!positioning) {
+          error('Missing positioning value');
+        }
+
+        return positioning;
+      }
+    }
+
+    function matchPositioning() {
+      var location = matchCoordinates();
+
+      if (location.x || location.y) {
+        return {
+          type: 'position',
+          value: location
+        };
+      }
+    }
+
+    function matchCoordinates() {
+      return {
+        x: matchDistance(),
+        y: matchDistance()
+      };
+    }
+
+    function matchListing(matcher) {
+      var captures = matcher(),
+        result = [];
+
+      if (captures) {
+        result.push(captures);
+        while (scan(tokens.comma)) {
+          captures = matcher();
+          if (captures) {
+            result.push(captures);
+          } else {
+            error('One extra comma');
+          }
+        }
+      }
+
+      return result;
+    }
+
+    function matchColorStop() {
+      var color = matchColor();
+
+      if (!color) {
+        error('Expected color definition');
+      }
+
+      color.length = matchDistance();
+      return color;
+    }
+
+    function matchColor() {
+      return matchHexColor() ||
+        matchRGBAColor() ||
+        matchRGBColor() ||
+        matchLiteralColor();
+    }
+
+    function matchLiteralColor() {
+      return match('literal', tokens.literalColor, 0);
+    }
+
+    function matchHexColor() {
+      return match('hex', tokens.hexColor, 1);
+    }
+
+    function matchRGBColor() {
+      return matchCall(tokens.rgbColor, function() {
+        return  {
+          type: 'rgb',
+          value: matchListing(matchNumber)
+        };
+      });
+    }
+
+    function matchRGBAColor() {
+      return matchCall(tokens.rgbaColor, function() {
+        return  {
+          type: 'rgba',
+          value: matchListing(matchNumber)
+        };
+      });
+    }
+
+    function matchNumber() {
+      return scan(tokens.number)[1];
+    }
+
+    function matchDistance() {
+      return match('%', tokens.percentageValue, 1) ||
+        matchPositionKeyword() ||
+        matchLength();
+    }
+
+    function matchPositionKeyword() {
+      return match('position-keyword', tokens.positionKeywords, 1);
+    }
+
+    function matchLength() {
+      return match('px', tokens.pixelValue, 1) ||
+        match('em', tokens.emValue, 1);
+    }
+
+    function match(type, pattern, captureIndex) {
+      var captures = scan(pattern);
+      if (captures) {
+        return {
+          type: type,
+          value: captures[captureIndex]
+        };
+      }
+    }
+
+    function scan(regexp) {
+      var captures,
+          blankCaptures;
+
+      blankCaptures = /^[\n\r\t\s]+/.exec(input);
+      if (blankCaptures) {
+          consume(blankCaptures[0].length);
+      }
+
+      captures = regexp.exec(input);
+      if (captures) {
+          consume(captures[0].length);
+      }
+
+      return captures;
+    }
+
+    function consume(size) {
+      input = input.substr(size);
+    }
+
+    return function(code) {
+      input = code.toString();
+      return getAST();
+    };
+  })();
+
+  var parse = GradientParser.parse;
+
+  var kebabToCamel = function kebabToCamel(s) {
+    return s.replace(/-./g, function (x) {
+      return x[1].toUpperCase();
+    });
+  };
   function isTransparent(color) {
     if (!color || color === 'none' || color === 'transparent') return true;
     if (color.startsWith('rgba')) {
@@ -14754,36 +15283,82 @@
         height = _ref2.height,
         style = _ref2.style;
       try {
+        var _style$getPropertyVal, _ref3;
         if (!width || !height) return Promise.resolve();
-
-        // TODO background-image
         var backgroundColor = style.getPropertyValue('background-color');
+        var backgroundImage = (_style$getPropertyVal = style.getPropertyValue('background-image')) != null ? _style$getPropertyVal : 'none';
 
         // Skip visually empty blocks
-        if (isTransparent(backgroundColor)) return Promise.resolve();
-
-        // TODO SVG stroke is drawn on center, CSS stroke is drawn on outside
-        // TODO border-top|bottom|left|right
-        // TODO stroke-style
-        var stroke = {
-          stroke: 'none',
-          'stroke-width': 1
-        };
+        if (isTransparent(backgroundColor) && isTransparent(backgroundImage)) return Promise.resolve();
         var borderColor = style.getPropertyValue('border-color');
         var borderStyle = style.getPropertyValue('border-style');
-        if (borderStyle !== 'none' && !isTransparent(borderColor)) {
-          stroke.stroke = borderColor;
-          stroke['stroke-width'] = style.getPropertyValue('border-width');
-        }
-        return Promise.resolve($('rect', _extends({
+        var props = _extends({
           x: x,
           y: y,
           width: width,
           height: height
-        }, stroke, {
+        }, (_ref3 = function () {
+          // TODO SVG stroke is drawn on center, CSS stroke is drawn on outside
+          // TODO border-top|bottom|left|right
+          // TODO stroke-style
+          if (borderStyle === 'none') return;
+          if (isTransparent(borderColor)) return;
+          return {
+            stroke: borderColor != null ? borderColor : 'none',
+            'stroke-width': style.getPropertyValue('border-width')
+          };
+        }()) != null ? _ref3 : {}, {
           fill: backgroundColor,
           rx: parseInt(style.getPropertyValue('border-radius')) || null
-        })));
+        });
+        return Promise.resolve(isTransparent(backgroundImage) ? $('rect', props)
+        // Render <rect> with background image
+        : function (_parseGradient$, _parseGradient) {
+          var defs = $('defs');
+          var id = "gradient_" + Date.now() + "-" + (Math.random() * 46656 | 0);
+
+          // TODO handle multiple gradients
+          var _ref4 = (_parseGradient$ = (_parseGradient = parse(backgroundImage)) == null ? void 0 : _parseGradient[0]) != null ? _parseGradient$ : {},
+            colorStops = _ref4.colorStops,
+            orientation = _ref4.orientation,
+            type = _ref4.type;
+
+          // TODO handle repeating gradients type, SEE https://github.com/rafaelcaricio/gradient-parser?tab=readme-ov-file#ast
+          var gradient = $(kebabToCamel(type), {
+            id: id,
+            gradientUnits: 'objectBoundingBox',
+            // Allow specifying rotation center in %
+            gradientTransform: orientation ? function () {
+              switch (orientation.type) {
+                case 'angular':
+                  return "rotate(" + (270 + parseFloat(orientation.value)) + ", 0.5, 0.5)";
+                case 'directional':
+                  {
+                    switch (orientation.value) {
+                      case 'top':
+                        return 'rotate(270, 0.5, 0.5)';
+                      case 'right':
+                        return null;
+                      case 'bottom':
+                        return 'rotate(90, 0.5, 0.5)';
+                      case 'left':
+                        return 'rotate(180, 0.5, 0.5)';
+                    }
+                  }
+              }
+            }() : 'rotate(90, 0.5, 0.5)'
+          }, defs, colorStops.map(function (colorStop, index) {
+            return $('stop', {
+              offset: colorStop.length
+              // TODO handle colorStop.length.type other than '%'
+              ? +colorStop.length.value / 100 : index / (colorStops.length - 1),
+              'stop-color': colorStop.type + "(" + colorStop.value + ")"
+            }, gradient);
+          }));
+          return $('g', {}, null, [defs, $('rect', _extends({}, props, {
+            fill: "url(#" + id + ")"
+          }))]);
+        }());
       } catch (e) {
         return Promise.reject(e);
       }
