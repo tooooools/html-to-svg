@@ -79,7 +79,9 @@ export default ({
                 }
               })()
             : 'rotate(90, 0.5, 0.5)'
-        }, defs, colorStops.map((colorStop, index) => (
+        }, defs)
+
+        colorStops.forEach((colorStop, index) => (
           $('stop', {
             offset: colorStop.length
               // TODO handle colorStop.length.type other than '%'
@@ -87,7 +89,7 @@ export default ({
               : index / (colorStops.length - 1),
             'stop-color': `${colorStop.type}(${colorStop.value})`
           }, gradient)
-        )))
+        ))
 
         return $('g', {}, null, [
           defs,

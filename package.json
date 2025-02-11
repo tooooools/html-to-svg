@@ -12,7 +12,7 @@
   "module": "./dist/html-to-svg.module.js",
   "unpkg": "./dist/html-to-svg.umd.js",
   "scripts": {
-    "build": "microbundle",
+    "build": "microbundle --compress false",
     "example": "npm run example:build -- -w & light-server -s example -p 1337 -w 'example, example/**'",
     "example:build": "microbundle -o example -f umd --external all --compress false",
     "preversion": "npm run build && git add dist example --force",
