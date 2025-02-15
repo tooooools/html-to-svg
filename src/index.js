@@ -1,8 +1,10 @@
 /* global Node */
 import Opentype from 'opentype.js'
+import { uid } from 'uid'
 import walk from './utils/dom-walk'
 import getZIndex from './utils/dom-get-zindex'
 import getClientRects from './utils/range-get-client-rects'
+import lastOf from './utils/array-last'
 
 import $ from './utils/dom-render-svg'
 import * as RENDERERS from './renderers'
@@ -54,27 +56,59 @@ export default function ({
         preserveAspectRatio: 'none'
       })
 
-      // Set the parent to the current SVG.
-      // This parent will change during the walk
-      let parent = svg
+      const defs = $('defs', null, svg)
+
+      // Set context to root SVG.
+      // Context will change during walk push/pop
+      const Context = (() => {
+        const stack = [svg]
+        const pop = () => stack.length > 0 && stack.pop()
+        const push = () => stack.push($('g', null, lastOf(stack)))
+        return {
+          pop,
+          push,
+          get current () { return lastOf(stack) },
+          apply: depth => {
+            const deltaDepth = depth - (stack.length - 1)
+            for (let i = 0; i < -deltaDepth; i++) pop()
+            for (let i = 0; i < deltaDepth; i++) push()
+          }
+        }
+      })()
 
       // Render every children
-      await walk(container, async element => {
+      await walk(container, async (element, depth, index) => {
         if (ignore && element !== container && element.matches(ignore)) return
+        Context.apply(depth)
 
+        // Extract geometric and styling data from element
         const style = window.getComputedStyle(element)
         const { x, y, width, height } = element.getBoundingClientRect()
+        const opacity = style.getPropertyValue('opacity')
+        const clipPathValue = style.getPropertyValue('clip-path')
+        const overflowValue = style.getPropertyValue('overflow')
 
-        if (element instanceof window.HTMLElement) {
-          // TODO opacity
+        if (overflowValue || clipPathValue) Context.push()
+        if (+opacity !== 1) Context.current.setAttribute('opacity', opacity)
 
-          // Handle CSS clip-path property
-          const clipPathValue = style.getPropertyValue('clip-path')
-          if (clipPathValue !== 'none') {
-            parent = $('g', null, svg)
-            // WARNING: CSS clip-path implementation is not done yet on arnaudjuracek/svg-to-pdf
-            parent.setAttribute('style', `clip-path: ${clipPathValue.replace(/"/g, "'")}`)
-          }
+        // Handle overflow: hidden
+        if (overflowValue === 'hidden') {
+          const clipPath = $('clipPath', { id: 'clip_' + uid() }, defs, [
+            $('rect', {
+              x: x - viewBox.x,
+              y: y - viewBox.y,
+              width,
+              height
+            })
+          ])
+
+          Context.current.setAttribute('clip-path', `url(#${clipPath.id})`)
+        }
+
+        // Handle CSS clip-path property
+        if (clipPathValue !== 'none') {
+          // WARNING: CSS clip-path implementation is not done yet on arnaudjuracek/svg-to-pdf
+          Context.current.setAttribute('style', `clip-path: ${clipPathValue.replace(/"/g, "'")}`)
         }
 
         // Render element
@@ -88,7 +122,7 @@ export default function ({
         }, options)
 
         if (transform) rendered = await transform(element, rendered)
-        if (rendered) parent.appendChild(rendered)
+        if (rendered) Context.current.appendChild(rendered)
 
         // Render text nodes inside the element
         if (element.innerText && element.childNodes.length) {
@@ -127,15 +161,12 @@ export default function ({
             }
           }
 
-          if (g.children.length) parent.appendChild(g)
+          if (g.children.length) Context.current.appendChild(g)
         }
-
-        // Continue walking
-        return true
       }, {
         sort: (a, b) => {
-          a.zIndex = a.zIndex ?? getZIndex(a)
-          b.zIndex = b.zIndex ?? getZIndex(b)
+          a.zIndex ??= getZIndex(a)
+          b.zIndex ??= getZIndex(b)
           return a.zIndex - b.zIndex
         }
       })
