@@ -84,10 +84,12 @@ export default function ({
         // Extract geometric and styling data from element
         const style = window.getComputedStyle(element)
         const { x, y, width, height } = element.getBoundingClientRect()
+        const opacity = style.getPropertyValue('opacity')
         const clipPathValue = style.getPropertyValue('clip-path')
         const overflowValue = style.getPropertyValue('overflow')
 
         if (overflowValue || clipPathValue) Context.push()
+        if (+opacity !== 1) Context.current.setAttribute('opacity', opacity)
 
         // Handle overflow: hidden
         if (overflowValue === 'hidden') {
