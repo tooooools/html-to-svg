@@ -105,7 +105,26 @@
       </svg>
     </section>
 
+    <section data-label='nesting'>
+      <div style='background: red; padding-left: 10px'>
+        <div style='background: red; padding-left: 10px'>a</div>
+        <div style='background: green; padding-left: 10px'>b</div>
+        <div style='background: blue; padding-left: 10px'>c</div>
+      </div>
+      <div style='background: green; padding-left: 10px'>e</div>
+      f
+    </section>
+
+    <section data-label='overflow:hidden'>
+      <div style='width: 100px; height: 100px; overflow: hidden'>
+        <div>averylongword</div>
+        <img src='https://github.com/arnaudjuracek.png?size=200' />
+      </div>
+      <img src='https://github.com/arnaudjuracek.png?size=200' />
+    </section>
+
     <section data-label='clip-path'>
+      <div>before</div>
       <div
         style='
           clip-path: polygon(50px 0px, 100px 50px, 50px 100px, 0px 50px);
@@ -114,8 +133,10 @@
           height: 100px;
         '
       >
-        Hello world
+        Hello <span>world</span>
+        <div>foo<span>bar</span></div>
       </div>
+      <div>after</div>
     </section>
 
     <section data-label='[BUG] negative positioning in clip-path'>
@@ -132,10 +153,10 @@
     </section>
 
     <section data-label='z-index' style='height: 18rem;'>
-      <div style='position: absolute; top: 2rem; left: 14rem; width: 10rem; height: 10rem; background: black;'></div>
-      <div style='position: absolute; top: 2rem; left: 2rem; width: 10rem; height: 10rem; background: red; z-index: 1;'></div>
       <div style='position: absolute; top: 6rem; left: 6rem; width: 10rem; height: 10rem; background: blue; z-index: 1;'></div>
+      <div style='position: absolute; top: 2rem; left: 14rem; width: 10rem; height: 10rem; background: black;'></div>
       <div style='position: absolute; top: 4rem; left: 10rem; width: 10rem; height: 10rem; background: green; z-index: 3;'></div>
+      <div style='position: absolute; top: 2rem; left: 2rem; width: 10rem; height: 10rem; background: red; z-index: 1;'></div>
     </section>
 
     <section data-label='background gradient'>
