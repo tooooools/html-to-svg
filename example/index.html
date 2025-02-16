@@ -194,15 +194,16 @@
 
     document.body.classList.toggle('diff', window.location.hash === '#diff')
 
-    for (const section of document.querySelectorAll('section')) {
-      const result = document.createElement('div')
-      result.classList.add('result')
-      section.parentNode.insertBefore(result, section.nextSibling)
+    window.addEventListener('load', async () => {
+      for (const section of document.querySelectorAll('section')) {
+        const result = document.createElement('div')
+        result.classList.add('result')
+        section.parentNode.insertBefore(result, section.nextSibling)
 
-      section.addEventListener('input', () => render(section, result))
-      if (document.readyState === 'complete') render(section, result)
-      else window.addEventListener('load', () => render(section, result))
-    }
+        section.addEventListener('input', () => render(section, result))
+        await render(section, result)
+      }
+    })
 
     async function render (section, result) {
       result.innerHTML = ''
