@@ -67,6 +67,10 @@ section::before {
   opacity: 0.3;
 }
 
+body.diff {
+  filter: invert();
+}
+
 body.diff section {
   transform: translateX(calc(50% + var(--space) / 2));
 }
