@@ -1,8 +1,10 @@
 import Opentype from 'opentype.js'
 import { uid } from 'uid'
+
 import walk from './utils/dom-walk'
 import getZIndex from './utils/dom-get-zindex'
 import getTextFragments from './utils/dom-get-text-fragments'
+import parseTransform from './utils/parse-transform'
 import lastOf from './utils/array-last'
 
 import $ from './utils/dom-render-svg'
@@ -44,8 +46,8 @@ export default function ({
     },
 
     // Render the HTML container as a shadow SVG
-    render: async function (container, options = {}, transform) {
-      const viewBox = container.getBoundingClientRect()
+    render: async function (root, options = {}, transform) {
+      const viewBox = root.getBoundingClientRect()
 
       // Create the SVG container
       const svg = $('svg', {
@@ -76,22 +78,41 @@ export default function ({
       })()
 
       // Render every children
-      await walk(container, async (element, depth, index) => {
-        if (ignore && element !== container && element.matches(ignore)) return
+      await walk(root, async (element, depth, index) => {
+        if (ignore && element !== root && element.matches(ignore)) return
         Context.apply(depth)
 
-        // Extract geometric and styling data from element
+        // Extract geometric and style data from element
         const style = window.getComputedStyle(element)
-        const { x, y, width, height } = element.getBoundingClientRect()
+        const matrix = element !== root && parseTransform(style.getPropertyValue('transform'))
         const opacity = style.getPropertyValue('opacity')
-        const clipPathValue = style.getPropertyValue('clip-path')
-        const overflowValue = style.getPropertyValue('overflow')
+        const clipPath = style.getPropertyValue('clip-path')
+        const overflow = style.getPropertyValue('overflow')
 
-        if (overflowValue || clipPathValue) Context.push()
-        if (+opacity !== 1) Context.current.setAttribute('opacity', opacity)
+        // Temporarily remove transformation to simplify coordinates calc
+        if (matrix) element.style.transform = 'none'
+        const { x, y, width, height } = element.getBoundingClientRect()
+
+        // Handle opacity
+        if (+opacity !== 1) {
+          Context.push()
+          Context.current.setAttribute('opacity', opacity)
+        }
+
+        // Handle transformation
+        if (matrix) {
+          Context.push()
+          Context.current.setAttribute('transform', matrix.toSVGTransform({
+            x: x - viewBox.x,
+            y: y - viewBox.y,
+            origin: style.getPropertyValue('transform-origin')
+              .split(' ')
+              .map(v => parseFloat(v))
+          }))
+        }
 
         // Handle overflow: hidden
-        if (overflowValue === 'hidden') {
+        if (overflow === 'hidden') {
           const clipPath = $('clipPath', { id: 'clip_' + uid() }, defs, [
             $('rect', {
               x: x - viewBox.x,
@@ -101,13 +122,15 @@ export default function ({
             })
           ])
 
+          Context.push()
           Context.current.setAttribute('clip-path', `url(#${clipPath.id})`)
         }
 
         // Handle CSS clip-path property
-        if (clipPathValue !== 'none') {
+        if (clipPath !== 'none') {
+          Context.push()
           // WARNING: CSS clip-path implementation is not done yet on arnaudjuracek/svg-to-pdf
-          Context.current.setAttribute('style', `clip-path: ${clipPathValue.replace(/"/g, "'")}`)
+          Context.current.setAttribute('style', `clip-path: ${clipPath.replace(/"/g, "'")}`)
         }
 
         // Render element
@@ -147,6 +170,9 @@ export default function ({
         }
 
         if (g.children.length) Context.current.appendChild(g)
+
+        // Restore removed transformation if any
+        if (matrix) element.style.transform = matrix.raw
       }, {
         sort: (a, b) => {
           a.zIndex ??= getZIndex(a)
