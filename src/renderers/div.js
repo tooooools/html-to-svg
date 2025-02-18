@@ -56,7 +56,8 @@ export default ({
     y,
     width,
     height,
-    fill: backgroundColor
+    fill: backgroundColor,
+    rx: borderRadius
   }, g)
 
   // Render background-image
