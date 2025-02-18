@@ -43,6 +43,7 @@ export default ({
 
   const backgroundColor = style.getPropertyValue('background-color')
   const backgroundImage = style.getPropertyValue('background-image') ?? 'none'
+  const borderRadius = parseInt(style.getPropertyValue('border-radius')) || null
   const borders = parseBorders(style)
 
   // Skip visually empty blocks
@@ -55,8 +56,7 @@ export default ({
     y,
     width,
     height,
-    fill: backgroundColor,
-    rx: parseInt(style.getPropertyValue('border-radius')) || null
+    fill: backgroundColor
   }, g)
 
   // Render background-image
@@ -107,56 +107,71 @@ export default ({
   }
 
   // Render border
-  for (const [dir, border] of Object.entries(borders ?? {})) {
-    const geom = {}
-    switch (dir) {
-      case 'top':
-        geom.x1 = x
-        geom.x2 = x + width
-        geom.y1 = geom.y2 = y + parseInt(border.width) / 2
-        break
+  if (!borderRadius) {
+    for (const [dir, border] of Object.entries(borders ?? {})) {
+      const geom = {}
+      switch (dir) {
+        case 'top':
+          geom.x1 = x
+          geom.x2 = x + width
+          geom.y1 = geom.y2 = y + parseInt(border.width) / 2
+          break
 
-      case 'right':
-        geom.x1 = geom.x2 = x + width - parseInt(border.width) / 2
-        geom.y1 = y
-        geom.y2 = y + height
-        break
+        case 'right':
+          geom.x1 = geom.x2 = x + width - parseInt(border.width) / 2
+          geom.y1 = y
+          geom.y2 = y + height
+          break
 
-      case 'bottom':
-        geom.x1 = x
-        geom.x2 = x + width
-        geom.y1 = geom.y2 = y + height - parseInt(border.width) / 2
-        break
+        case 'bottom':
+          geom.x1 = x
+          geom.x2 = x + width
+          geom.y1 = geom.y2 = y + height - parseInt(border.width) / 2
+          break
 
-      case 'left':
-        geom.x1 = geom.x2 = x + parseInt(border.width) / 2
-        geom.y1 = y
-        geom.y2 = y + height
-        break
+        case 'left':
+          geom.x1 = geom.x2 = x + parseInt(border.width) / 2
+          geom.y1 = y
+          geom.y2 = y + height
+          break
+      }
+
+      $('line', {
+        ...geom,
+        stroke: border.color,
+        'stroke-width': border.width,
+        ...(() => {
+          switch (border.style) {
+            case 'dotted': return {
+              'stroke-dasharray': [0, border.width * 2].join(' '),
+              'stroke-dashoffset': 1,
+              'stroke-linejoin': 'round',
+              'stroke-linecap': 'round'
+            }
+
+            case 'dashed': return {
+              // https://developer.mozilla.org/en-US/docs/Web/CSS/border-style#dashed
+              'stroke-dasharray': [border.width * 2, 4].join(' ')
+            }
+
+            default: return {}
+          }
+        })()
+      }, g)
     }
+  } else if (borders?.top) {
+    // Handle border-radius by drawing the whole border as a standard stroke
+    // TODO handle border-radius for specific border-dir.
+    // For now, we use borders.top as a placeholder for all borders
+    rect.setAttribute('stroke', borders.top.color)
+    rect.setAttribute('stroke-width', borders.top.width)
 
-    $('line', {
-      ...geom,
-      stroke: border.color,
-      'stroke-width': border.width,
-      ...(() => {
-        switch (border.style) {
-          case 'dotted': return {
-            'stroke-dasharray': [0, border.width * 2].join(' '),
-            'stroke-dashoffset': 1,
-            'stroke-linejoin': 'round',
-            'stroke-linecap': 'round'
-          }
-
-          case 'dashed': return {
-            // https://developer.mozilla.org/en-US/docs/Web/CSS/border-style#dashed
-            'stroke-dasharray': [border.width * 2, 4].join(' ')
-          }
-
-          default: return {}
-        }
-      })()
-    }, g)
+    // Draw border from center
+    rect.setAttribute('rx', borderRadius - borders.top.width / 2)
+    rect.setAttribute('x', x + borders.top.width / 2)
+    rect.setAttribute('y', y + borders.top.width / 2)
+    rect.setAttribute('width', width - borders.top.width)
+    rect.setAttribute('height', height - borders.top.width)
   }
 
   return g
