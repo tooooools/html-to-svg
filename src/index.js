@@ -1,9 +1,8 @@
-/* global Node */
 import Opentype from 'opentype.js'
 import { uid } from 'uid'
 import walk from './utils/dom-walk'
 import getZIndex from './utils/dom-get-zindex'
-import getClientRects from './utils/range-get-client-rects'
+import getTextFragments from './utils/dom-get-text-fragments'
 import lastOf from './utils/array-last'
 
 import $ from './utils/dom-render-svg'
@@ -118,51 +117,35 @@ export default function ({
           y: y - viewBox.y,
           width,
           height,
-          style
+          style,
+          viewBox
         }, options)
 
         if (transform) rendered = await transform(element, rendered)
         if (rendered) Context.current.appendChild(rendered)
 
         // Render text nodes inside the element
-        if (element.innerText && element.childNodes.length) {
-          const g = $('g', { class: 'text' })
+        const g = $('g', { class: 'text' })
+        for (const { rect, fragment } of getTextFragments(element) ?? []) {
+          try {
+            let text = await renderers.text(fragment.textContent.trimEnd(), {
+              x: rect.x - viewBox.x,
+              y: rect.y - viewBox.y,
+              width: rect.width,
+              height: rect.height,
+              style
+            }, options)
 
-          for (const node of element.childNodes) {
-            if (node.nodeType !== Node.TEXT_NODE) continue
-            if (!node.textContent.length) continue
-
-            // Text interface does not provide a .innerText method, which would be
-            // more appropriate than textContent as it skips non-rendered whitespaces
-            // Splitting white-space leading Text trick the browser to recompute
-            // the layout itself, dealing with implicit space between adjacent nodes
-            if (/^\s/.test(node.textContent)) {
-              node.splitText(1)
-              continue
-            }
-
-            for (const { rect, fragment } of getClientRects(node)) {
-              try {
-                let text = await renderers.text(fragment.textContent.trimEnd(), {
-                  x: rect.x - viewBox.x,
-                  y: rect.y - viewBox.y,
-                  width: rect.width,
-                  height: rect.height,
-                  style
-                }, options)
-
-                if (transform) text = await transform(element, text)
-                if (text) g.appendChild(text)
-              } catch (error) {
-                // TODO[improve] error handling
-                console.warn(new Error(`Rendering failed for the following text: '${fragment.textContent}'`, { cause: error }))
-                console.warn(error)
-              }
-            }
+            if (transform) text = await transform(element, text)
+            if (text) g.appendChild(text)
+          } catch (error) {
+            // TODO[improve] error handling
+            console.warn(new Error(`Rendering failed for the following text: '${fragment.textContent}'`, { cause: error }))
+            console.warn(error)
           }
-
-          if (g.children.length) Context.current.appendChild(g)
         }
+
+        if (g.children.length) Context.current.appendChild(g)
       }, {
         sort: (a, b) => {
           a.zIndex ??= getZIndex(a)
