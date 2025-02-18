@@ -14678,6 +14678,454 @@
     return fragments;
   }
 
+  /**
+   * @ignore
+   * @type {RegExp}
+   */
+
+  /**
+   * Parse a string formatted as matrix(a,b,c,d,e,f)
+   * @param string {string} String with an affine matrix
+   * @returns {Matrix} Affine Matrix
+   *
+   * @example
+   * > fromString('matrix(1,2,3,4,5,6)')
+   * {a: 1, b: 2, c: 3, d: 4, c: 5, e: 6}
+   */
+  function fromString (string) {
+    const parseFloatOrThrow = number => {
+      const n = parseFloat(number);
+      if (Number.isFinite(n)) return n // excludes NaN, +Infinite, -Infinite
+      throw new Error(`'${string}' is not a matrix`)
+    };
+
+    const prefix = string.substring(0, 7).toLowerCase();
+    const suffix = string.substring(string.length - 1);
+    const body = string.substring(7, string.length - 1);
+    const elements = body.split(',');
+
+    if (
+      prefix === 'matrix(' &&
+      suffix === ')' &&
+      elements.length === 6
+    ) {
+      return {
+        a: parseFloatOrThrow(elements[0]),
+        b: parseFloatOrThrow(elements[1]),
+        c: parseFloatOrThrow(elements[2]),
+        d: parseFloatOrThrow(elements[3]),
+        e: parseFloatOrThrow(elements[4]),
+        f: parseFloatOrThrow(elements[5])
+      }
+    }
+
+    throw new Error(`'${string}' is not a matrix`)
+  }
+
+  function isUndefined (val) {
+    return typeof val === 'undefined'
+  }
+
+  /**
+   * Calculate a translate matrix
+   * @param tx {number} Translation on axis x
+   * @param [ty = 0] {number} Translation on axis y
+   * @returns {Matrix} Affine Matrix
+   */
+  function translate (tx, ty = 0) {
+    return {
+      a: 1,
+      c: 0,
+      e: tx,
+      b: 0,
+      d: 1,
+      f: ty
+    }
+  }
+
+  /**
+   * Merge multiple matrices into one
+   * @param matrices {...Matrix | Matrix[]} Matrices listed as separate parameters or in an array
+   * @returns {Matrix} Affine Matrix
+   */
+  function transform (...matrices) {
+    matrices = Array.isArray(matrices[0]) ? matrices[0] : matrices;
+
+    const multiply = (m1, m2) => {
+      return {
+        a: m1.a * m2.a + m1.c * m2.b,
+        c: m1.a * m2.c + m1.c * m2.d,
+        e: m1.a * m2.e + m1.c * m2.f + m1.e,
+        b: m1.b * m2.a + m1.d * m2.b,
+        d: m1.b * m2.c + m1.d * m2.d,
+        f: m1.b * m2.e + m1.d * m2.f + m1.f
+      }
+    };
+
+    switch (matrices.length) {
+      case 0:
+        throw new Error('no matrices provided')
+
+      case 1:
+        return matrices[0]
+
+      case 2:
+        return multiply(matrices[0], matrices[1])
+
+      default: {
+        const [m1, m2, ...rest] = matrices;
+        const m = multiply(m1, m2);
+        return transform(m, ...rest)
+      }
+    }
+  }
+
+  /**
+   * Merge multiple matrices into one
+   * @param matrices {...Matrix | Matrix[]} Matrices listed as separate parameters or in an array
+   * @returns {Matrix} Affine Matrix
+   */
+  function compose (...matrices) {
+    return transform(...matrices)
+  }
+
+  const { cos, sin, PI } = Math;
+  /**
+   * Calculate a rotation matrix
+   * @param angle {number} Angle in radians
+   * @param [cx] {number} If (cx,cy) are supplied the rotate is about this point
+   * @param [cy] {number} If (cx,cy) are supplied the rotate is about this point
+   * @returns {Matrix} Affine Matrix
+   */
+  function rotate (angle, cx, cy) {
+    const cosAngle = cos(angle);
+    const sinAngle = sin(angle);
+    const rotationMatrix = {
+      a: cosAngle,
+      c: -sinAngle,
+      e: 0,
+      b: sinAngle,
+      d: cosAngle,
+      f: 0
+    };
+    if (isUndefined(cx) || isUndefined(cy)) {
+      return rotationMatrix
+    }
+
+    return transform([
+      translate(cx, cy),
+      rotationMatrix,
+      translate(-cx, -cy)
+    ])
+  }
+
+  /**
+   * Calculate a scaling matrix
+   * @param sx {number} Scaling on axis x
+   * @param [sy = sx] {number} Scaling on axis y (default sx)
+   * @param [cx] {number} If (cx,cy) are supplied the scaling is about this point
+   * @param [cy] {number} If (cx,cy) are supplied the scaling is about this point
+   * @returns {Matrix} Affine Matrix
+   */
+  function scale (sx, sy = undefined, cx = undefined, cy = undefined) {
+    if (isUndefined(sy)) sy = sx;
+
+    const scaleMatrix = {
+      a: sx,
+      c: 0,
+      e: 0,
+      b: 0,
+      d: sy,
+      f: 0
+    };
+
+    if (isUndefined(cx) || isUndefined(cy)) {
+      return scaleMatrix
+    }
+
+    return transform([
+      translate(cx, cy),
+      scaleMatrix,
+      translate(-cx, -cy)
+    ])
+  }
+
+  /**
+   * Serialize an affine matrix to a string that can be used with CSS or SVG
+   * @param matrix {Matrix} Affine Matrix
+   * @returns {string} String that contains an affine matrix formatted as matrix(a,b,c,d,e,f)
+   */
+
+  /**
+   * Serialize an affine matrix to a string that can be used with CSS or SVG
+   * @param matrix {Matrix} Affine Matrix
+   * @returns {string} String that contains an affine matrix formatted as matrix(a,b,c,d,e,f)
+   */
+  function toString (matrix) {
+    return `matrix(${matrix.a},${matrix.b},${matrix.c},${matrix.d},${matrix.e},${matrix.f})`
+  }
+
+  // @generated by Peggy 4.2.0.
+  //
+  // https://peggyjs.org/
+
+
+  function peg$subclass(child, parent) {
+    function C() { this.constructor = child; }
+    C.prototype = parent.prototype;
+    child.prototype = new C();
+  }
+
+  function peg$SyntaxError(message, expected, found, location) {
+    var self = Error.call(this, message);
+    // istanbul ignore next Check is a necessary evil to support older environments
+    if (Object.setPrototypeOf) {
+      Object.setPrototypeOf(self, peg$SyntaxError.prototype);
+    }
+    self.expected = expected;
+    self.found = found;
+    self.location = location;
+    self.name = "SyntaxError";
+    return self;
+  }
+
+  peg$subclass(peg$SyntaxError, Error);
+
+  function peg$padEnd(str, targetLength, padString) {
+    padString = padString || " ";
+    if (str.length > targetLength) { return str; }
+    targetLength -= str.length;
+    padString += padString.repeat(targetLength);
+    return str + padString.slice(0, targetLength);
+  }
+
+  peg$SyntaxError.prototype.format = function(sources) {
+    var str = "Error: " + this.message;
+    if (this.location) {
+      var src = null;
+      var k;
+      for (k = 0; k < sources.length; k++) {
+        if (sources[k].source === this.location.source) {
+          src = sources[k].text.split(/\r\n|\n|\r/g);
+          break;
+        }
+      }
+      var s = this.location.start;
+      var offset_s = (this.location.source && (typeof this.location.source.offset === "function"))
+        ? this.location.source.offset(s)
+        : s;
+      var loc = this.location.source + ":" + offset_s.line + ":" + offset_s.column;
+      if (src) {
+        var e = this.location.end;
+        var filler = peg$padEnd("", offset_s.line.toString().length, ' ');
+        var line = src[s.line - 1];
+        var last = s.line === e.line ? e.column : line.length + 1;
+        var hatLen = (last - s.column) || 1;
+        str += "\n --> " + loc + "\n"
+            + filler + " |\n"
+            + offset_s.line + " | " + line + "\n"
+            + filler + " | " + peg$padEnd("", s.column - 1, ' ')
+            + peg$padEnd("", hatLen, "^");
+      } else {
+        str += "\n at " + loc;
+      }
+    }
+    return str;
+  };
+
+  peg$SyntaxError.buildMessage = function(expected, found) {
+    var DESCRIBE_EXPECTATION_FNS = {
+      literal: function(expectation) {
+        return "\"" + literalEscape(expectation.text) + "\"";
+      },
+
+      class: function(expectation) {
+        var escapedParts = expectation.parts.map(function(part) {
+          return Array.isArray(part)
+            ? classEscape(part[0]) + "-" + classEscape(part[1])
+            : classEscape(part);
+        });
+
+        return "[" + (expectation.inverted ? "^" : "") + escapedParts.join("") + "]";
+      },
+
+      any: function() {
+        return "any character";
+      },
+
+      end: function() {
+        return "end of input";
+      },
+
+      other: function(expectation) {
+        return expectation.description;
+      }
+    };
+
+    function hex(ch) {
+      return ch.charCodeAt(0).toString(16).toUpperCase();
+    }
+
+    function literalEscape(s) {
+      return s
+        .replace(/\\/g, "\\\\")
+        .replace(/"/g,  "\\\"")
+        .replace(/\0/g, "\\0")
+        .replace(/\t/g, "\\t")
+        .replace(/\n/g, "\\n")
+        .replace(/\r/g, "\\r")
+        .replace(/[\x00-\x0F]/g,          function(ch) { return "\\x0" + hex(ch); })
+        .replace(/[\x10-\x1F\x7F-\x9F]/g, function(ch) { return "\\x"  + hex(ch); });
+    }
+
+    function classEscape(s) {
+      return s
+        .replace(/\\/g, "\\\\")
+        .replace(/\]/g, "\\]")
+        .replace(/\^/g, "\\^")
+        .replace(/-/g,  "\\-")
+        .replace(/\0/g, "\\0")
+        .replace(/\t/g, "\\t")
+        .replace(/\n/g, "\\n")
+        .replace(/\r/g, "\\r")
+        .replace(/[\x00-\x0F]/g,          function(ch) { return "\\x0" + hex(ch); })
+        .replace(/[\x10-\x1F\x7F-\x9F]/g, function(ch) { return "\\x"  + hex(ch); });
+    }
+
+    function describeExpectation(expectation) {
+      return DESCRIBE_EXPECTATION_FNS[expectation.type](expectation);
+    }
+
+    function describeExpected(expected) {
+      var descriptions = expected.map(describeExpectation);
+      var i, j;
+
+      descriptions.sort();
+
+      if (descriptions.length > 0) {
+        for (i = 1, j = 1; i < descriptions.length; i++) {
+          if (descriptions[i - 1] !== descriptions[i]) {
+            descriptions[j] = descriptions[i];
+            j++;
+          }
+        }
+        descriptions.length = j;
+      }
+
+      switch (descriptions.length) {
+        case 1:
+          return descriptions[0];
+
+        case 2:
+          return descriptions[0] + " or " + descriptions[1];
+
+        default:
+          return descriptions.slice(0, -1).join(", ")
+            + ", or "
+            + descriptions[descriptions.length - 1];
+      }
+    }
+
+    function describeFound(found) {
+      return found ? "\"" + literalEscape(found) + "\"" : "end of input";
+    }
+
+    return "Expected " + describeExpected(expected) + " but " + describeFound(found) + " found.";
+  };
+
+  /**
+   * Decompose a matrix into translation, scaling and rotation components, optionally
+   * take horizontal and vertical flip in to consideration.
+   * Note this function decomposes a matrix in rotation -> scaling -> translation order. I.e. for
+   * certain translation T {tx, ty}, rotation R and scaling S { sx, sy }, it's only true for:
+   *  decomposeTSR(compose(T, S, R)) === { translate: T, rotation: R, scale: S }
+   * composing in a different order may yield a different decomposition result.
+   * @param matrix {Matrix} Affine Matrix
+   * @param  flipX {boolean} Whether the matrix contains vertical flip, i.e. mirrors on x-axis
+   * @param  flipY {boolean} Whether the matrix contains horizontal flip, i.e. mirrors on y-axis
+   * @returns {Transform} A transform object consisted by its translation, scaling
+   * and rotation components.
+   */
+  function decomposeTSR (matrix, flipX = false, flipY = false) {
+    // Remove flip from the matrix first - flip could be incorrectly interpreted as
+    // rotations (e.g. flipX + flipY = rotate by 180 degrees).
+    // Note flipX is a vertical flip, and flipY is a horizontal flip.
+    if (flipX) {
+      if (flipY) {
+        matrix = compose(matrix, scale(-1, -1));
+      } else {
+        matrix = compose(matrix, scale(1, -1));
+      }
+    } else if (flipY) {
+      matrix = compose(matrix, scale(-1, 1));
+    }
+
+    const a = matrix.a; const b = matrix.b;
+    const c = matrix.c; const d = matrix.d;
+    let scaleX, scaleY, rotation;
+
+    if (a !== 0 || c !== 0) {
+      const hypotAc = Math.hypot(a, c);
+      scaleX = hypotAc;
+      scaleY = (a * d - b * c) / hypotAc;
+      const acos = Math.acos(a / hypotAc);
+      rotation = c > 0 ? -acos : acos;
+    } else if (b !== 0 || d !== 0) {
+      const hypotBd = Math.hypot(b, d);
+      scaleX = (a * d - b * c) / hypotBd;
+      scaleY = hypotBd;
+      const acos = Math.acos(b / hypotBd);
+      rotation = Math.PI / 2 + (d > 0 ? -acos : acos);
+    } else {
+      scaleX = 0;
+      scaleY = 0;
+      rotation = 0;
+    }
+
+    // put the flip factors back
+    if (flipY) {
+      scaleX = -scaleX;
+    }
+
+    if (flipX) {
+      scaleY = -scaleY;
+    }
+
+    return {
+      translate: { tx: matrix.e, ty: matrix.f },
+      scale: { sx: scaleX, sy: scaleY },
+      rotation: { angle: rotation }
+    }
+  }
+
+  function parseTransform (value) {
+    if (value === 'none') return null;
+    var matrix = fromString(value);
+    var _Transform$decomposeT = decomposeTSR(matrix),
+      translate$1 = _Transform$decomposeT.translate,
+      scale$1 = _Transform$decomposeT.scale,
+      rotation = _Transform$decomposeT.rotation;
+    return {
+      raw: value,
+      translate: translate$1,
+      scale: scale$1,
+      rotation: rotation,
+      toSVGTransform: function toSVGTransform(_temp) {
+        var _translate$tx, _translate$ty, _scale$sx, _ref2, _scale$sy, _rotation$angle;
+        var _ref = _temp === void 0 ? {} : _temp,
+          _ref$x = _ref.x,
+          x = _ref$x === void 0 ? 0 : _ref$x,
+          _ref$y = _ref.y,
+          y = _ref$y === void 0 ? 0 : _ref$y,
+          _ref$origin = _ref.origin,
+          origin = _ref$origin === void 0 ? [0, 0] : _ref$origin;
+        var cx = x + origin[0];
+        var cy = y + origin[1];
+        return toString(compose(translate((_translate$tx = translate$1 == null ? void 0 : translate$1.tx) != null ? _translate$tx : 0, (_translate$ty = translate$1 == null ? void 0 : translate$1.ty) != null ? _translate$ty : 0), scale((_scale$sx = scale$1 == null ? void 0 : scale$1.sx) != null ? _scale$sx : 1, (_ref2 = (_scale$sy = scale$1 == null ? void 0 : scale$1.sy) != null ? _scale$sy : scale$1 == null ? void 0 : scale$1.sx) != null ? _ref2 : 1, cx, cy), rotate((_rotation$angle = rotation == null ? void 0 : rotation.angle) != null ? _rotation$angle : 0, cx, cy)));
+      }
+    };
+  }
+
   var lastOf = (function (arr) {
     return arr[arr.length - 1];
   });
@@ -15302,7 +15750,8 @@
           y: y,
           width: width,
           height: height,
-          fill: backgroundColor
+          fill: backgroundColor,
+          rx: borderRadius
         }, g);
 
         // Render background-image
@@ -16232,12 +16681,12 @@
         }
       },
       // Render the HTML container as a shadow SVG
-      render: function render(container, options, transform) {
+      render: function render(root, options, transform) {
         if (options === void 0) {
           options = {};
         }
         try {
-          var viewBox = container.getBoundingClientRect();
+          var viewBox = root.getBoundingClientRect();
 
           // Create the SVG container
           var svg = $('svg', {
@@ -16273,28 +16722,48 @@
           }();
 
           // Render every children
-          return Promise.resolve(walk(container, function (element, depth, index) {
+          return Promise.resolve(walk(root, function (element, depth, index) {
             try {
               var _renderers$element$ta;
-              if (ignore && element !== container && element.matches(ignore)) return Promise.resolve();
+              if (ignore && element !== root && element.matches(ignore)) return Promise.resolve();
               Context.apply(depth);
 
-              // Extract geometric and styling data from element
+              // Extract geometric and style data from element
               var style = window.getComputedStyle(element);
+              var matrix = element !== root && parseTransform(style.getPropertyValue('transform'));
+              var opacity = style.getPropertyValue('opacity');
+              var clipPath = style.getPropertyValue('clip-path');
+              var overflow = style.getPropertyValue('overflow');
+
+              // Temporarily remove transformation to simplify coordinates calc
+              if (matrix) element.style.transform = 'none';
               var _element$getBoundingC = element.getBoundingClientRect(),
                 x = _element$getBoundingC.x,
                 y = _element$getBoundingC.y,
                 width = _element$getBoundingC.width,
                 height = _element$getBoundingC.height;
-              var opacity = style.getPropertyValue('opacity');
-              var clipPathValue = style.getPropertyValue('clip-path');
-              var overflowValue = style.getPropertyValue('overflow');
-              if (overflowValue || clipPathValue) Context.push();
-              if (+opacity !== 1) Context.current.setAttribute('opacity', opacity);
+
+              // Handle opacity
+              if (+opacity !== 1) {
+                Context.push();
+                Context.current.setAttribute('opacity', opacity);
+              }
+
+              // Handle transformation
+              if (matrix) {
+                Context.push();
+                Context.current.setAttribute('transform', matrix.toSVGTransform({
+                  x: x - viewBox.x,
+                  y: y - viewBox.y,
+                  origin: style.getPropertyValue('transform-origin').split(' ').map(function (v) {
+                    return parseFloat(v);
+                  })
+                }));
+              }
 
               // Handle overflow: hidden
-              if (overflowValue === 'hidden') {
-                var clipPath = $('clipPath', {
+              if (overflow === 'hidden') {
+                var _clipPath = $('clipPath', {
                   id: 'clip_' + uid()
                 }, defs, [$('rect', {
                   x: x - viewBox.x,
@@ -16302,13 +16771,15 @@
                   width: width,
                   height: height
                 })]);
-                Context.current.setAttribute('clip-path', "url(#" + clipPath.id + ")");
+                Context.push();
+                Context.current.setAttribute('clip-path', "url(#" + _clipPath.id + ")");
               }
 
               // Handle CSS clip-path property
-              if (clipPathValue !== 'none') {
+              if (clipPath !== 'none') {
+                Context.push();
                 // WARNING: CSS clip-path implementation is not done yet on arnaudjuracek/svg-to-pdf
-                Context.current.setAttribute('style', "clip-path: " + clipPathValue.replace(/"/g, "'"));
+                Context.current.setAttribute('style', "clip-path: " + clipPath.replace(/"/g, "'"));
               }
 
               // Render element
@@ -16326,6 +16797,9 @@
                   var _getTextFragments;
                   function _temp7() {
                     if (g.children.length) Context.current.appendChild(g);
+
+                    // Restore removed transformation if any
+                    if (matrix) element.style.transform = matrix.raw;
                   }
                   if (rendered) Context.current.appendChild(rendered);
 
