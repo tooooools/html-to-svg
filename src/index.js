@@ -118,7 +118,8 @@ export default function ({
           width,
           height,
           style,
-          viewBox
+          viewBox,
+          defs
         }, options)
 
         if (transform) rendered = await transform(element, rendered)
