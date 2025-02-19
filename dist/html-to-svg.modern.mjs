@@ -564,6 +564,7 @@ function index ({
   fonts = []
 } = {}) {
   const cache = new Map();
+  const detransformed = new Map();
 
   // Init curried renderers
   const renderers = {};
@@ -574,10 +575,19 @@ function index ({
       cache
     });
   }
+
+  // Restore all removed transformation if any
+  const cleanup = () => {
+    for (const [element, transform] of detransformed) {
+      element.style.transform = transform;
+      detransformed.delete(element);
+    }
+  };
   return {
     get cache() {
       return cache;
     },
+    cleanup,
     // Preload all fonts before resolving
     preload: async function () {
       for (const font of fonts) {
@@ -593,10 +603,12 @@ function index ({
     // Clear cache and delete all resources
     destroy: function () {
       cache.clear();
+      cleanup();
       for (const font of fonts) delete font.opentype;
     },
     // Render the HTML container as a shadow SVG
     render: async function (root, options = {}, transform) {
+      cleanup();
       const viewBox = root.getBoundingClientRect();
 
       // Create the SVG container
@@ -642,7 +654,12 @@ function index ({
         const overflow = style.getPropertyValue('overflow');
 
         // Temporarily remove transformation to simplify coordinates calc
-        if (matrix) element.style.transform = 'none';
+        if (matrix) {
+          // WARNING this will cause issues with concurent renderings:
+          // <renderer>#cleanup is called before to ensure purity
+          detransformed.set(element, element.style.transform);
+          element.style.transform = 'none';
+        }
         const {
           x,
           y,
@@ -650,15 +667,16 @@ function index ({
           height
         } = element.getBoundingClientRect();
 
+        // Create a new context
+        if (+opacity !== 1 || matrix || overflow === 'hidden' || clipPath !== 'none') Context.push();
+
         // Handle opacity
         if (+opacity !== 1) {
-          Context.push();
           Context.current.setAttribute('opacity', opacity);
         }
 
         // Handle transformation
         if (matrix) {
-          Context.push();
           Context.current.setAttribute('transform', matrix.toSVGTransform({
             x: x - viewBox.x,
             y: y - viewBox.y,
@@ -676,13 +694,11 @@ function index ({
             width,
             height
           })]);
-          Context.push();
           Context.current.setAttribute('clip-path', `url(#${_clipPath.id})`);
         }
 
         // Handle CSS clip-path property
         if (clipPath !== 'none') {
-          Context.push();
           // WARNING: CSS clip-path implementation is not done yet on arnaudjuracek/svg-to-pdf
           Context.current.setAttribute('style', `clip-path: ${clipPath.replace(/"/g, "'")}`);
         }
@@ -729,9 +745,6 @@ function index ({
           }
         }
         if (g.children.length) Context.current.appendChild(g);
-
-        // Restore removed transformation if any
-        if (matrix) element.style.transform = matrix.raw;
       }, {
         sort: (a, b) => {
           var _a$zIndex, _b$zIndex;
@@ -740,6 +753,7 @@ function index ({
           return a.zIndex - b.zIndex;
         }
       });
+      cleanup();
       return svg;
     }
   };
