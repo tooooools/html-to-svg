@@ -16,6 +16,7 @@ export default function ({
   fonts = []
 } = {}) {
   const cache = new Map()
+  const detransformed = new Map()
 
   // Init curried renderers
   const renderers = {}
@@ -23,8 +24,17 @@ export default function ({
     renderers[k] = RENDERERS[k]({ debug, fonts, cache })
   }
 
+  // Restore all removed transformation if any
+  const cleanup = () => {
+    for (const [element, transform] of detransformed) {
+      element.style.transform = transform
+      detransformed.delete(element)
+    }
+  }
+
   return {
     get cache () { return cache },
+    cleanup,
 
     // Preload all fonts before resolving
     preload: async function () {
@@ -42,11 +52,13 @@ export default function ({
     // Clear cache and delete all resources
     destroy: function () {
       cache.clear()
+      cleanup()
       for (const font of fonts) delete font.opentype
     },
 
     // Render the HTML container as a shadow SVG
     render: async function (root, options = {}, transform) {
+      cleanup()
       const viewBox = root.getBoundingClientRect()
 
       // Create the SVG container
@@ -90,7 +102,13 @@ export default function ({
         const overflow = style.getPropertyValue('overflow')
 
         // Temporarily remove transformation to simplify coordinates calc
-        if (matrix) element.style.transform = 'none'
+        if (matrix) {
+          // WARNING this will cause issues with concurent renderings:
+          // <renderer>#cleanup is called before to ensure purity
+          detransformed.set(element, element.style.transform)
+          element.style.transform = 'none'
+        }
+
         const { x, y, width, height } = element.getBoundingClientRect()
 
         // Create a new context
@@ -174,9 +192,6 @@ export default function ({
         }
 
         if (g.children.length) Context.current.appendChild(g)
-
-        // Restore removed transformation if any
-        if (matrix) element.style.transform = matrix.raw
       }, {
         sort: (a, b) => {
           a.zIndex ??= getZIndex(a)
@@ -185,6 +200,7 @@ export default function ({
         }
       })
 
+      cleanup()
       return svg
     }
   }
