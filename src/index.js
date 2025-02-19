@@ -93,15 +93,21 @@ export default function ({
         if (matrix) element.style.transform = 'none'
         const { x, y, width, height } = element.getBoundingClientRect()
 
+        // Create a new context
+        if (
+          +opacity !== 1 ||
+          matrix ||
+          overflow === 'hidden' ||
+          clipPath !== 'none'
+        ) Context.push()
+
         // Handle opacity
         if (+opacity !== 1) {
-          Context.push()
           Context.current.setAttribute('opacity', opacity)
         }
 
         // Handle transformation
         if (matrix) {
-          Context.push()
           Context.current.setAttribute('transform', matrix.toSVGTransform({
             x: x - viewBox.x,
             y: y - viewBox.y,
@@ -122,13 +128,11 @@ export default function ({
             })
           ])
 
-          Context.push()
           Context.current.setAttribute('clip-path', `url(#${clipPath.id})`)
         }
 
         // Handle CSS clip-path property
         if (clipPath !== 'none') {
-          Context.push()
           // WARNING: CSS clip-path implementation is not done yet on arnaudjuracek/svg-to-pdf
           Context.current.setAttribute('style', `clip-path: ${clipPath.replace(/"/g, "'")}`)
         }
