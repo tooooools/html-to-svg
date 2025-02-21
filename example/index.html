@@ -46,6 +46,18 @@
   </head>
 
   <body>
+    <section data-label='box-shadow'>
+      <div style='box-shadow: none; background: salmon; width: 10rem; height: 10rem'></div>
+      <div style='box-shadow: 10px 10px 0 red; background: salmon; width: 10rem; height: 10rem; margin-top: 3rem'></div>
+      <div style='box-shadow: 10px 10px 10px red; background: salmon; width: 10rem; height: 10rem; margin-top: 3rem'></div>
+      <div style='box-shadow: 0px 0px 10px 10px red; background: salmon; width: 10rem; height: 10rem; margin-top: 3rem'></div>
+      <div style='box-shadow: 0px 0px 0 10px red; background: salmon; width: 10rem; height: 10rem; margin-top: 3rem'></div>
+      <div style='box-shadow: 10px 10px 10px red, -10px 10px 10px blue; background: salmon; width: 10rem; height: 10rem; margin-top: 3rem'></div>
+      <div style='box-shadow: 10px 10px 10px rgba(0, 0, 0, 50%); background: salmon; width: 10rem; height: 10rem; margin-top: 3rem'></div>
+      <div style='box-shadow: 10px 10px 10px rgb(0 0 0 / 50%); background: salmon; width: 10rem; height: 10rem; margin-top: 3rem'></div>
+      <div style='transform: rotate(10deg); box-shadow: 10px 10px 10px red, -10px 10px 10px blue; background: salmon; width: 10rem; height: 10rem; margin-top: 3rem'></div>
+    </section>
+
     <section data-label='rotation' spellcheck='false'>
       <div style='background: salmon; width: 100px; height: 100px; margin-bottom: 1rem;'>Hello world</div>
       <div style='transform: rotate(-10deg); background: salmon; width: 100px; height: 100px'>Hello world</div>
@@ -194,7 +206,6 @@
       <div style='background-image: linear-gradient(-10deg, black, red); margin-block: 0.5rem; padding: 1em;'>Hello world</div>
       <div style='background-image: radial-gradient(black, red); margin-block: 0.5rem; padding: 1em;'>Hello world</div>
     </section>
-
   </body>
 
   <script src='html-to-svg.umd.js'></script>

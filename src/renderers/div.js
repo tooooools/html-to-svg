@@ -43,7 +43,8 @@ export default ({
 
   const backgroundColor = style.getPropertyValue('background-color')
   const backgroundImage = style.getPropertyValue('background-image') ?? 'none'
-  const borderRadius = parseInt(style.getPropertyValue('border-radius')) || null
+  const boxShadow = style.getPropertyValue('box-shadow') ?? 'none'
+  const borderRadius = parseInt(style.getPropertyValue('border-radius')) ?? null
   const borders = parseBorders(style)
 
   // Skip visually empty blocks
@@ -105,6 +106,43 @@ export default ({
     }
 
     rect.setAttribute('fill', `url(#${gradient.id})`)
+  }
+
+  // Render box shadow
+  if (boxShadow !== 'none') {
+    const filter = $('filter', { id: 'filter_' + uid() }, defs)
+    // This assumes browser consistency of the CSSStyleDeclaration.getPropertyValue returned string
+    const REGEX_SHADOW_DECLARATION = /rgba?\(([\d.]{1,3}(,\s)?){3,4}\)\s(-?(\d+)px\s?){4}/g
+    const REGEX_SHADOW_DECLARATION_PARSER = /(rgba?\((?:[\d.]{1,3}(?:,\s)?){3,4}\))\s(-?[\d.]+)px\s(-?[\d.]+)px\s(-?[\d.]+)px\s(-?[\d.]+)px/
+
+    for (const shadowString of boxShadow.match(REGEX_SHADOW_DECLARATION) ?? []) {
+      let [
+        ,
+        color,
+        offx,
+        offy,
+        blur,
+        spread
+      ] = shadowString.match(REGEX_SHADOW_DECLARATION_PARSER)
+
+      offx = parseInt(offx)
+      offy = parseInt(offy)
+      spread = parseInt(spread)
+
+      filter.appendChild($('feGaussianBlur', { stdDeviation: blur / 2 }))
+
+      const shadow = $('rect', {
+        x: x + offx - spread,
+        y: y + offy - spread,
+        width: width + spread * 2,
+        height: height + spread * 2,
+        fill: color,
+        rx: borderRadius,
+        filter: `url(#${filter.id})`
+      })
+
+      g.prepend(shadow)
+    }
   }
 
   // Render border

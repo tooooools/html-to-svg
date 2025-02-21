@@ -15733,11 +15733,12 @@
         style = _ref2.style,
         defs = _ref2.defs;
       try {
-        var _style$getPropertyVal;
+        var _style$getPropertyVal, _style$getPropertyVal2, _parseInt;
         if (!width || !height) return Promise.resolve();
         var backgroundColor = style.getPropertyValue('background-color');
         var backgroundImage = (_style$getPropertyVal = style.getPropertyValue('background-image')) != null ? _style$getPropertyVal : 'none';
-        var borderRadius = parseInt(style.getPropertyValue('border-radius')) || null;
+        var boxShadow = (_style$getPropertyVal2 = style.getPropertyValue('box-shadow')) != null ? _style$getPropertyVal2 : 'none';
+        var borderRadius = (_parseInt = parseInt(style.getPropertyValue('border-radius'))) != null ? _parseInt : null;
         var borders = parseBorders(style);
 
         // Skip visually empty blocks
@@ -15801,6 +15802,42 @@
             gradient.appendChild(stop);
           }
           rect.setAttribute('fill', "url(#" + gradient.id + ")");
+        }
+
+        // Render box shadow
+        if (boxShadow !== 'none') {
+          var filter = $('filter', {
+            id: 'filter_' + uid()
+          }, defs);
+          // This assumes browser consistency of the CSSStyleDeclaration.getPropertyValue returned string
+          var REGEX_SHADOW_DECLARATION = /rgba?\(([\d.]{1,3}(,\s)?){3,4}\)\s(-?(\d+)px\s?){4}/g;
+          var REGEX_SHADOW_DECLARATION_PARSER = /(rgba?\((?:[\d.]{1,3}(?:,\s)?){3,4}\))\s(-?[\d.]+)px\s(-?[\d.]+)px\s(-?[\d.]+)px\s(-?[\d.]+)px/;
+          for (var _iterator = _createForOfIteratorHelperLoose((_boxShadow$match = boxShadow.match(REGEX_SHADOW_DECLARATION)) != null ? _boxShadow$match : []), _step; !(_step = _iterator()).done;) {
+            var _boxShadow$match;
+            var shadowString = _step.value;
+            var _shadowString$match = shadowString.match(REGEX_SHADOW_DECLARATION_PARSER),
+              color = _shadowString$match[1],
+              offx = _shadowString$match[2],
+              offy = _shadowString$match[3],
+              blur = _shadowString$match[4],
+              spread = _shadowString$match[5];
+            offx = parseInt(offx);
+            offy = parseInt(offy);
+            spread = parseInt(spread);
+            filter.appendChild($('feGaussianBlur', {
+              stdDeviation: blur / 2
+            }));
+            var shadow = $('rect', {
+              x: x + offx - spread,
+              y: y + offy - spread,
+              width: width + spread * 2,
+              height: height + spread * 2,
+              fill: color,
+              rx: borderRadius,
+              filter: "url(#" + filter.id + ")"
+            });
+            g.prepend(shadow);
+          }
         }
 
         // Render border
@@ -16639,6 +16676,7 @@
       _ref$fonts = _ref.fonts,
       fonts = _ref$fonts === void 0 ? [] : _ref$fonts;
     var cache = new Map();
+    var detransformed = new Map();
 
     // Init curried renderers
     var renderers = {};
@@ -16649,10 +16687,22 @@
         cache: cache
       });
     }
+
+    // Restore all removed transformation if any
+    var cleanup = function cleanup() {
+      for (var _iterator = _createForOfIteratorHelperLoose(detransformed), _step; !(_step = _iterator()).done;) {
+        var _step$value = _step.value,
+          element = _step$value[0],
+          transform = _step$value[1];
+        element.style.transform = transform;
+        detransformed["delete"](element);
+      }
+    };
     return {
       get cache() {
         return cache;
       },
+      cleanup: cleanup,
       // Preload all fonts before resolving
       preload: function preload() {
         try {
@@ -16675,8 +16725,9 @@
       // Clear cache and delete all resources
       destroy: function destroy() {
         cache.clear();
-        for (var _iterator = _createForOfIteratorHelperLoose(fonts), _step; !(_step = _iterator()).done;) {
-          var font = _step.value;
+        cleanup();
+        for (var _iterator2 = _createForOfIteratorHelperLoose(fonts), _step2; !(_step2 = _iterator2()).done;) {
+          var font = _step2.value;
           delete font.opentype;
         }
       },
@@ -16686,6 +16737,7 @@
           options = {};
         }
         try {
+          cleanup();
           var viewBox = root.getBoundingClientRect();
 
           // Create the SVG container
@@ -16736,22 +16788,28 @@
               var overflow = style.getPropertyValue('overflow');
 
               // Temporarily remove transformation to simplify coordinates calc
-              if (matrix) element.style.transform = 'none';
+              if (matrix) {
+                // WARNING this will cause issues with concurent renderings:
+                // <renderer>#cleanup is called before to ensure purity
+                detransformed.set(element, element.style.transform);
+                element.style.transform = 'none';
+              }
               var _element$getBoundingC = element.getBoundingClientRect(),
                 x = _element$getBoundingC.x,
                 y = _element$getBoundingC.y,
                 width = _element$getBoundingC.width,
                 height = _element$getBoundingC.height;
 
+              // Create a new context
+              if (+opacity !== 1 || matrix || overflow === 'hidden' || clipPath !== 'none') Context.push();
+
               // Handle opacity
               if (+opacity !== 1) {
-                Context.push();
                 Context.current.setAttribute('opacity', opacity);
               }
 
               // Handle transformation
               if (matrix) {
-                Context.push();
                 Context.current.setAttribute('transform', matrix.toSVGTransform({
                   x: x - viewBox.x,
                   y: y - viewBox.y,
@@ -16771,13 +16829,11 @@
                   width: width,
                   height: height
                 })]);
-                Context.push();
                 Context.current.setAttribute('clip-path', "url(#" + _clipPath.id + ")");
               }
 
               // Handle CSS clip-path property
               if (clipPath !== 'none') {
-                Context.push();
                 // WARNING: CSS clip-path implementation is not done yet on arnaudjuracek/svg-to-pdf
                 Context.current.setAttribute('style', "clip-path: " + clipPath.replace(/"/g, "'"));
               }
@@ -16797,9 +16853,6 @@
                   var _getTextFragments;
                   function _temp7() {
                     if (g.children.length) Context.current.appendChild(g);
-
-                    // Restore removed transformation if any
-                    if (matrix) element.style.transform = matrix.raw;
                   }
                   if (rendered) Context.current.appendChild(rendered);
 
@@ -16857,6 +16910,7 @@
               return a.zIndex - b.zIndex;
             }
           })).then(function () {
+            cleanup();
             return svg;
           });
         } catch (e) {
