@@ -341,11 +341,12 @@ var DivRenderer = (function (_ref) {
       style = _ref2.style,
       defs = _ref2.defs;
     try {
-      var _style$getPropertyVal;
+      var _style$getPropertyVal, _style$getPropertyVal2, _parseInt;
       if (!width || !height) return Promise.resolve();
       var backgroundColor = style.getPropertyValue('background-color');
       var backgroundImage = (_style$getPropertyVal = style.getPropertyValue('background-image')) != null ? _style$getPropertyVal : 'none';
-      var borderRadius = parseInt(style.getPropertyValue('border-radius')) || null;
+      var boxShadow = (_style$getPropertyVal2 = style.getPropertyValue('box-shadow')) != null ? _style$getPropertyVal2 : 'none';
+      var borderRadius = (_parseInt = parseInt(style.getPropertyValue('border-radius'))) != null ? _parseInt : null;
       var borders = parseBorders(style);
 
       // Skip visually empty blocks
@@ -409,6 +410,42 @@ var DivRenderer = (function (_ref) {
           gradient.appendChild(stop);
         }
         rect.setAttribute('fill', "url(#" + gradient.id + ")");
+      }
+
+      // Render box shadow
+      if (boxShadow !== 'none') {
+        var filter = $('filter', {
+          id: 'filter_' + uid()
+        }, defs);
+        // This assumes browser consistency of the CSSStyleDeclaration.getPropertyValue returned string
+        var REGEX_SHADOW_DECLARATION = /rgba?\(([\d.]{1,3}(,\s)?){3,4}\)\s(-?(\d+)px\s?){4}/g;
+        var REGEX_SHADOW_DECLARATION_PARSER = /(rgba?\((?:[\d.]{1,3}(?:,\s)?){3,4}\))\s(-?[\d.]+)px\s(-?[\d.]+)px\s(-?[\d.]+)px\s(-?[\d.]+)px/;
+        for (var _iterator = _createForOfIteratorHelperLoose((_boxShadow$match = boxShadow.match(REGEX_SHADOW_DECLARATION)) != null ? _boxShadow$match : []), _step; !(_step = _iterator()).done;) {
+          var _boxShadow$match;
+          var shadowString = _step.value;
+          var _shadowString$match = shadowString.match(REGEX_SHADOW_DECLARATION_PARSER),
+            color = _shadowString$match[1],
+            offx = _shadowString$match[2],
+            offy = _shadowString$match[3],
+            blur = _shadowString$match[4],
+            spread = _shadowString$match[5];
+          offx = parseInt(offx);
+          offy = parseInt(offy);
+          spread = parseInt(spread);
+          filter.appendChild($('feGaussianBlur', {
+            stdDeviation: blur / 2
+          }));
+          var shadow = $('rect', {
+            x: x + offx - spread,
+            y: y + offy - spread,
+            width: width + spread * 2,
+            height: height + spread * 2,
+            fill: color,
+            rx: borderRadius,
+            filter: "url(#" + filter.id + ")"
+          });
+          g.prepend(shadow);
+        }
       }
 
       // Render border
