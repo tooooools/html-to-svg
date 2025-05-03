@@ -223,7 +223,7 @@ function getTextFragments (element) {
 }
 
 function parseTransform (value) {
-  if (value === 'none') return null;
+  if (!value || value === 'none' || value === '') return null;
   var matrix = Transform.fromString(value);
   var _Transform$decomposeT = Transform.decomposeTSR(matrix),
     translate = _Transform$decomposeT.translate,

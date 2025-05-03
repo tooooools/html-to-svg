@@ -66,7 +66,7 @@ function getTextFragments (element) {
 }
 
 function parseTransform (value) {
-  if (value === 'none') return null;
+  if (!value || value === 'none' || value === '') return null;
   const matrix = Transform.fromString(value);
   const {
     translate,
