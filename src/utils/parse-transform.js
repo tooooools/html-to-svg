@@ -1,7 +1,7 @@
 import * as Transform from 'transformation-matrix'
 
 export default function (value) {
-  if (value === 'none') return null
+  if (!value || value === 'none' || value === '') return null
 
   const matrix = Transform.fromString(value)
   const { translate, scale, rotation } = Transform.decomposeTSR(matrix)
