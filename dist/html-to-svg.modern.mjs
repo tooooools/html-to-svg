@@ -681,6 +681,7 @@ function index ({
         const style = window.getComputedStyle(element);
         const matrix = element !== root && parseTransform(style.getPropertyValue('transform'));
         const opacity = style.getPropertyValue('opacity');
+        const mixBlendMode = style.getPropertyValue('mix-blend-mode');
         const clipPath = style.getPropertyValue('clip-path');
         const overflow = style.getPropertyValue('overflow');
 
@@ -699,11 +700,17 @@ function index ({
         } = element.getBoundingClientRect();
 
         // Create a new context
-        if (+opacity !== 1 || matrix || overflow === 'hidden' || clipPath !== 'none') Context.push();
+        if (+opacity !== 1 || matrix || mixBlendMode !== 'normal' || overflow === 'hidden' || clipPath !== 'none') Context.push();
 
         // Handle opacity
         if (+opacity !== 1) {
           Context.current.setAttribute('opacity', opacity);
+        }
+
+        // Handle mix-blend-mode
+        if (mixBlendMode !== 'normal') {
+          console.log(mixBlendMode);
+          Context.current.style.mixBlendMode = mixBlendMode;
         }
 
         // Handle transformation
