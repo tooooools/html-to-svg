@@ -320,6 +320,44 @@ var canvas = (function (_ref) {
   };
 });
 
+var ImageRenderer = (function (_ref) {
+  return function (element, _ref2) {
+    var x = _ref2.x,
+      y = _ref2.y,
+      width = _ref2.width,
+      height = _ref2.height;
+    try {
+      if (!width || !height) return Promise.resolve();
+      if (!element.src) return Promise.resolve();
+      return Promise.resolve($('image', {
+        x: x,
+        y: y,
+        width: width,
+        height: height,
+        href: element.src
+      }));
+    } catch (e) {
+      return Promise.reject(e);
+    }
+  };
+});
+
+var getImageSize = function getImageSize(url) {
+  try {
+    return Promise.resolve(new Promise(function (resolve) {
+      var image = new Image();
+      image.onload = function () {
+        return resolve({
+          width: image.width,
+          height: image.height
+        });
+      };
+      image.src = url;
+    }));
+  } catch (e) {
+    return Promise.reject(e);
+  }
+};
 var kebabToCamel = function kebabToCamel(s) {
   return s.replace(/-./g, function (x) {
     return x[1].toUpperCase();
@@ -356,6 +394,8 @@ function parseBorders(s) {
   return borders;
 }
 var DivRenderer = (function (_ref) {
+  var debug = _ref.debug,
+    fonts = _ref.fonts;
   return function (element, _ref2) {
     var x = _ref2.x,
       y = _ref2.y,
@@ -365,6 +405,113 @@ var DivRenderer = (function (_ref) {
       defs = _ref2.defs;
     try {
       var _style$getPropertyVal, _style$getPropertyVal2, _parseInt;
+      var _temp3 = function _temp3() {
+        // Render box shadow
+        if (boxShadow !== 'none') {
+          var filter = $('filter', {
+            id: 'filter_' + uid.uid()
+          }, defs);
+          // This assumes browser consistency of the CSSStyleDeclaration.getPropertyValue returned string
+          var REGEX_SHADOW_DECLARATION = /rgba?\(([\d.]{1,3}(,\s)?){3,4}\)\s(-?(\d+)px\s?){4}/g;
+          var REGEX_SHADOW_DECLARATION_PARSER = /(rgba?\((?:[\d.]{1,3}(?:,\s)?){3,4}\))\s(-?[\d.]+)px\s(-?[\d.]+)px\s(-?[\d.]+)px\s(-?[\d.]+)px/;
+          for (var _iterator = _createForOfIteratorHelperLoose((_boxShadow$match = boxShadow.match(REGEX_SHADOW_DECLARATION)) != null ? _boxShadow$match : []), _step; !(_step = _iterator()).done;) {
+            var _boxShadow$match;
+            var shadowString = _step.value;
+            var _shadowString$match = shadowString.match(REGEX_SHADOW_DECLARATION_PARSER),
+              color = _shadowString$match[1],
+              offx = _shadowString$match[2],
+              offy = _shadowString$match[3],
+              blur = _shadowString$match[4],
+              spread = _shadowString$match[5];
+            offx = parseInt(offx);
+            offy = parseInt(offy);
+            spread = parseInt(spread);
+            filter.appendChild($('feGaussianBlur', {
+              stdDeviation: blur / 2
+            }));
+            var shadow = $('rect', {
+              x: x + offx - spread,
+              y: y + offy - spread,
+              width: width + spread * 2,
+              height: height + spread * 2,
+              fill: color,
+              rx: borderRadius,
+              filter: "url(#" + filter.id + ")"
+            });
+            g.prepend(shadow);
+          }
+        }
+
+        // Render border
+        if (!borderRadius) {
+          var _loop = function _loop() {
+            var _Object$entries$_i = _Object$entries[_i2],
+              dir = _Object$entries$_i[0],
+              border = _Object$entries$_i[1];
+            var geom = {};
+            switch (dir) {
+              case 'top':
+                geom.x1 = x;
+                geom.x2 = x + width;
+                geom.y1 = geom.y2 = y + parseInt(border.width) / 2;
+                break;
+              case 'right':
+                geom.x1 = geom.x2 = x + width - parseInt(border.width) / 2;
+                geom.y1 = y;
+                geom.y2 = y + height;
+                break;
+              case 'bottom':
+                geom.x1 = x;
+                geom.x2 = x + width;
+                geom.y1 = geom.y2 = y + height - parseInt(border.width) / 2;
+                break;
+              case 'left':
+                geom.x1 = geom.x2 = x + parseInt(border.width) / 2;
+                geom.y1 = y;
+                geom.y2 = y + height;
+                break;
+            }
+            $('line', _extends({}, geom, {
+              stroke: border.color,
+              'stroke-width': border.width
+            }, function () {
+              switch (border.style) {
+                case 'dotted':
+                  return {
+                    'stroke-dasharray': [0, border.width * 2].join(' '),
+                    'stroke-dashoffset': 1,
+                    'stroke-linejoin': 'round',
+                    'stroke-linecap': 'round'
+                  };
+                case 'dashed':
+                  return {
+                    // https://developer.mozilla.org/en-US/docs/Web/CSS/border-style#dashed
+                    'stroke-dasharray': [border.width * 2, 4].join(' ')
+                  };
+                default:
+                  return {};
+              }
+            }()), g);
+          };
+          for (var _i2 = 0, _Object$entries = Object.entries(borders != null ? borders : {}); _i2 < _Object$entries.length; _i2++) {
+            _loop();
+          }
+        } else if (borders != null && borders.top) {
+          // Handle border-radius by drawing the whole border as a standard stroke
+          // TODO handle border-radius for specific border-dir.
+          // For now, we use borders.top as a placeholder for all borders
+          rect.setAttribute('stroke', borders.top.color);
+          rect.setAttribute('stroke-width', borders.top.width);
+
+          // Draw border from center
+          rect.setAttribute('rx', borderRadius - borders.top.width / 2);
+          rect.setAttribute('x', x + borders.top.width / 2);
+          rect.setAttribute('y', y + borders.top.width / 2);
+          rect.setAttribute('width', width - borders.top.width);
+          rect.setAttribute('height', height - borders.top.width);
+        }
+        return g;
+      };
       if (!width || !height) return Promise.resolve();
       var backgroundColor = style.getPropertyValue('background-color');
       var backgroundImage = (_style$getPropertyVal = style.getPropertyValue('background-image')) != null ? _style$getPropertyVal : 'none';
@@ -387,181 +534,94 @@ var DivRenderer = (function (_ref) {
       }, g);
 
       // Render background-image
-      if (!isTransparent(backgroundImage)) {
-        var _parseGradient$, _parseGradient;
-        // TODO handle multiple gradients
-        var _ref3 = (_parseGradient$ = (_parseGradient = gradientParser.parse(backgroundImage)) == null ? void 0 : _parseGradient[0]) != null ? _parseGradient$ : {},
-          colorStops = _ref3.colorStops,
-          orientation = _ref3.orientation,
-          type = _ref3.type;
+      var _temp2 = function () {
+        if (!isTransparent(backgroundImage)) {
+          var _backgroundImage$matc;
+          var url = ((_backgroundImage$matc = backgroundImage.match(/url\("?(.*?)"?\)/)) != null ? _backgroundImage$matc : [])[1];
 
-        // TODO handle repeating gradients type, SEE https://github.com/rafaelcaricio/gradient-parser?tab=readme-ov-file#ast
-        var gradient = $(kebabToCamel(type), {
-          id: 'gradient_' + uid.uid(),
-          gradientUnits: 'objectBoundingBox',
-          // Allow specifying rotation center in %
-          gradientTransform: orientation ? function () {
-            switch (orientation.type) {
-              case 'angular':
-                return "rotate(" + (270 + parseFloat(orientation.value)) + ", 0.5, 0.5)";
-              case 'directional':
-                {
-                  switch (orientation.value) {
-                    case 'top':
-                      return 'rotate(270, 0.5, 0.5)';
-                    case 'right':
-                      return null;
-                    case 'bottom':
-                      return 'rotate(90, 0.5, 0.5)';
-                    case 'left':
-                      return 'rotate(180, 0.5, 0.5)';
+          // Render background-image
+          var _temp = function () {
+            if (url) {
+              var backgroundSize = style.getPropertyValue('background-size');
+              var renderImage = ImageRenderer({
+                debug: debug,
+                fonts: fonts
+              });
+              // TODO handle background-size
+              // TODO handle background-repeat
+              return Promise.resolve(getImageSize(url)).then(function (size) {
+                return Promise.resolve(renderImage({
+                  src: url
+                }, {
+                  x: x,
+                  y: y,
+                  width: Math.max(width, size.width),
+                  height: Math.max(height, size.height)
+                })).then(function (image) {
+                  var clipPath = $('clipPath', {
+                    id: 'clip_' + uid.uid()
+                  }, defs, [$('rect', {
+                    x: x,
+                    y: y,
+                    width: width,
+                    height: height
+                  })]);
+                  image.setAttribute('clip-path', "url(#" + clipPath.id + ")");
+                  g.appendChild(image);
+                });
+              });
+            } else {
+              var _parseGradient$, _parseGradient;
+              // TODO handle multiple gradients
+              var _ref3 = (_parseGradient$ = (_parseGradient = gradientParser.parse(backgroundImage)) == null ? void 0 : _parseGradient[0]) != null ? _parseGradient$ : {},
+                colorStops = _ref3.colorStops,
+                orientation = _ref3.orientation,
+                type = _ref3.type;
+
+              // TODO handle repeating gradients type, SEE https://github.com/rafaelcaricio/gradient-parser?tab=readme-ov-file#ast
+              var gradient = $(kebabToCamel(type), {
+                id: 'gradient_' + uid.uid(),
+                gradientUnits: 'objectBoundingBox',
+                // Allow specifying rotation center in %
+                gradientTransform: orientation ? function () {
+                  switch (orientation.type) {
+                    case 'angular':
+                      return "rotate(" + (270 + parseFloat(orientation.value)) + ", 0.5, 0.5)";
+                    case 'directional':
+                      {
+                        switch (orientation.value) {
+                          case 'top':
+                            return 'rotate(270, 0.5, 0.5)';
+                          case 'right':
+                            return null;
+                          case 'bottom':
+                            return 'rotate(90, 0.5, 0.5)';
+                          case 'left':
+                            return 'rotate(180, 0.5, 0.5)';
+                        }
+                      }
                   }
-                }
+                }() : 'rotate(90, 0.5, 0.5)'
+              }, defs);
+
+              // Add color stops
+              for (var index = 0; index < colorStops.length; index++) {
+                var colorStop = colorStops[index];
+                var stop = $('stop', {
+                  offset: colorStop.length
+                  // TODO handle colorStop.length.type other than '%'
+                  ? +colorStop.length.value / 100 : index / (colorStops.length - 1),
+                  'stop-color': colorStop.type + "(" + colorStop.value + ")"
+                });
+                gradient.appendChild(stop);
+              }
+              rect.setAttribute('fill', "url(#" + gradient.id + ")");
             }
-          }() : 'rotate(90, 0.5, 0.5)'
-        }, defs);
-
-        // Add color stops
-        for (var index = 0; index < colorStops.length; index++) {
-          var colorStop = colorStops[index];
-          var stop = $('stop', {
-            offset: colorStop.length
-            // TODO handle colorStop.length.type other than '%'
-            ? +colorStop.length.value / 100 : index / (colorStops.length - 1),
-            'stop-color': colorStop.type + "(" + colorStop.value + ")"
-          });
-          gradient.appendChild(stop);
+          }();
+          if (_temp && _temp.then) return _temp.then(function () {});
         }
-        rect.setAttribute('fill', "url(#" + gradient.id + ")");
-      }
-
-      // Render box shadow
-      if (boxShadow !== 'none') {
-        var filter = $('filter', {
-          id: 'filter_' + uid.uid()
-        }, defs);
-        // This assumes browser consistency of the CSSStyleDeclaration.getPropertyValue returned string
-        var REGEX_SHADOW_DECLARATION = /rgba?\(([\d.]{1,3}(,\s)?){3,4}\)\s(-?(\d+)px\s?){4}/g;
-        var REGEX_SHADOW_DECLARATION_PARSER = /(rgba?\((?:[\d.]{1,3}(?:,\s)?){3,4}\))\s(-?[\d.]+)px\s(-?[\d.]+)px\s(-?[\d.]+)px\s(-?[\d.]+)px/;
-        for (var _iterator = _createForOfIteratorHelperLoose((_boxShadow$match = boxShadow.match(REGEX_SHADOW_DECLARATION)) != null ? _boxShadow$match : []), _step; !(_step = _iterator()).done;) {
-          var _boxShadow$match;
-          var shadowString = _step.value;
-          var _shadowString$match = shadowString.match(REGEX_SHADOW_DECLARATION_PARSER),
-            color = _shadowString$match[1],
-            offx = _shadowString$match[2],
-            offy = _shadowString$match[3],
-            blur = _shadowString$match[4],
-            spread = _shadowString$match[5];
-          offx = parseInt(offx);
-          offy = parseInt(offy);
-          spread = parseInt(spread);
-          filter.appendChild($('feGaussianBlur', {
-            stdDeviation: blur / 2
-          }));
-          var shadow = $('rect', {
-            x: x + offx - spread,
-            y: y + offy - spread,
-            width: width + spread * 2,
-            height: height + spread * 2,
-            fill: color,
-            rx: borderRadius,
-            filter: "url(#" + filter.id + ")"
-          });
-          g.prepend(shadow);
-        }
-      }
-
-      // Render border
-      if (!borderRadius) {
-        var _loop = function _loop() {
-          var _Object$entries$_i = _Object$entries[_i2],
-            dir = _Object$entries$_i[0],
-            border = _Object$entries$_i[1];
-          var geom = {};
-          switch (dir) {
-            case 'top':
-              geom.x1 = x;
-              geom.x2 = x + width;
-              geom.y1 = geom.y2 = y + parseInt(border.width) / 2;
-              break;
-            case 'right':
-              geom.x1 = geom.x2 = x + width - parseInt(border.width) / 2;
-              geom.y1 = y;
-              geom.y2 = y + height;
-              break;
-            case 'bottom':
-              geom.x1 = x;
-              geom.x2 = x + width;
-              geom.y1 = geom.y2 = y + height - parseInt(border.width) / 2;
-              break;
-            case 'left':
-              geom.x1 = geom.x2 = x + parseInt(border.width) / 2;
-              geom.y1 = y;
-              geom.y2 = y + height;
-              break;
-          }
-          $('line', _extends({}, geom, {
-            stroke: border.color,
-            'stroke-width': border.width
-          }, function () {
-            switch (border.style) {
-              case 'dotted':
-                return {
-                  'stroke-dasharray': [0, border.width * 2].join(' '),
-                  'stroke-dashoffset': 1,
-                  'stroke-linejoin': 'round',
-                  'stroke-linecap': 'round'
-                };
-              case 'dashed':
-                return {
-                  // https://developer.mozilla.org/en-US/docs/Web/CSS/border-style#dashed
-                  'stroke-dasharray': [border.width * 2, 4].join(' ')
-                };
-              default:
-                return {};
-            }
-          }()), g);
-        };
-        for (var _i2 = 0, _Object$entries = Object.entries(borders != null ? borders : {}); _i2 < _Object$entries.length; _i2++) {
-          _loop();
-        }
-      } else if (borders != null && borders.top) {
-        // Handle border-radius by drawing the whole border as a standard stroke
-        // TODO handle border-radius for specific border-dir.
-        // For now, we use borders.top as a placeholder for all borders
-        rect.setAttribute('stroke', borders.top.color);
-        rect.setAttribute('stroke-width', borders.top.width);
-
-        // Draw border from center
-        rect.setAttribute('rx', borderRadius - borders.top.width / 2);
-        rect.setAttribute('x', x + borders.top.width / 2);
-        rect.setAttribute('y', y + borders.top.width / 2);
-        rect.setAttribute('width', width - borders.top.width);
-        rect.setAttribute('height', height - borders.top.width);
-      }
-      return Promise.resolve(g);
-    } catch (e) {
-      return Promise.reject(e);
-    }
-  };
-});
-
-var image = (function (_ref) {
-  return function (element, _ref2) {
-    var x = _ref2.x,
-      y = _ref2.y,
-      width = _ref2.width,
-      height = _ref2.height;
-    try {
-      if (!width || !height) return Promise.resolve();
-      if (!element.src) return Promise.resolve();
-      return Promise.resolve($('image', {
-        x: x,
-        y: y,
-        width: width,
-        height: height,
-        href: element.src
-      }));
+      }();
+      return Promise.resolve(_temp2 && _temp2.then ? _temp2.then(_temp3) : _temp3(_temp2));
     } catch (e) {
       return Promise.reject(e);
     }
@@ -1129,7 +1189,7 @@ var RENDERERS = {
   MARK: SpanRenderer,
   SPAN: SpanRenderer,
   CANVAS: canvas,
-  IMG: image,
+  IMG: ImageRenderer,
   SVG: svg
 };
 
@@ -1442,7 +1502,6 @@ function index (_temp) {
 
             // Handle mix-blend-mode
             if (mixBlendMode !== 'normal') {
-              console.log(mixBlendMode);
               Context.current.style.mixBlendMode = mixBlendMode;
             }
 

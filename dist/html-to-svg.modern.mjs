@@ -138,6 +138,27 @@ function _extends() {
   return _extends.apply(this, arguments);
 }
 
+var ImageRenderer = (({
+  debug,
+  fonts
+}) => async (element, {
+  x,
+  y,
+  width,
+  height,
+  style
+}) => {
+  if (!width || !height) return;
+  if (!element.src) return;
+  return $('image', {
+    x,
+    y,
+    width,
+    height,
+    href: element.src
+  });
+});
+
 const kebabToCamel = s => s.replace(/-./g, x => x[1].toUpperCase());
 function isTransparent(color) {
   if (!color || color === 'none' || color === 'transparent') return true;
@@ -167,6 +188,16 @@ function parseBorders(s) {
     };
   }
   return borders;
+}
+async function getImageSize(url) {
+  return new Promise(resolve => {
+    const image = new Image();
+    image.onload = () => resolve({
+      width: image.width,
+      height: image.height
+    });
+    image.src = url;
+  });
 }
 var DivRenderer = (({
   debug,
@@ -203,52 +234,85 @@ var DivRenderer = (({
 
   // Render background-image
   if (!isTransparent(backgroundImage)) {
-    var _parseGradient$, _parseGradient;
-    // TODO handle multiple gradients
-    const {
-      colorStops,
-      orientation,
-      type
-    } = (_parseGradient$ = (_parseGradient = parse(backgroundImage)) == null ? void 0 : _parseGradient[0]) != null ? _parseGradient$ : {};
+    var _backgroundImage$matc;
+    const url = ((_backgroundImage$matc = backgroundImage.match(/url\("?(.*?)"?\)/)) != null ? _backgroundImage$matc : [])[1];
 
-    // TODO handle repeating gradients type, SEE https://github.com/rafaelcaricio/gradient-parser?tab=readme-ov-file#ast
-    const gradient = $(kebabToCamel(type), {
-      id: 'gradient_' + uid(),
-      gradientUnits: 'objectBoundingBox',
-      // Allow specifying rotation center in %
-      gradientTransform: orientation ? (() => {
-        switch (orientation.type) {
-          case 'angular':
-            return `rotate(${270 + parseFloat(orientation.value)}, 0.5, 0.5)`;
-          case 'directional':
-            {
-              switch (orientation.value) {
-                case 'top':
-                  return 'rotate(270, 0.5, 0.5)';
-                case 'right':
-                  return null;
-                case 'bottom':
-                  return 'rotate(90, 0.5, 0.5)';
-                case 'left':
-                  return 'rotate(180, 0.5, 0.5)';
-              }
-            }
-        }
-      })() : 'rotate(90, 0.5, 0.5)'
-    }, defs);
-
-    // Add color stops
-    for (let index = 0; index < colorStops.length; index++) {
-      const colorStop = colorStops[index];
-      const stop = $('stop', {
-        offset: colorStop.length
-        // TODO handle colorStop.length.type other than '%'
-        ? +colorStop.length.value / 100 : index / (colorStops.length - 1),
-        'stop-color': `${colorStop.type}(${colorStop.value})`
+    // Render background-image
+    if (url) {
+      style.getPropertyValue('background-size');
+      const renderImage = ImageRenderer({
+        debug,
+        fonts
       });
-      gradient.appendChild(stop);
+      // TODO handle background-size
+      // TODO handle background-repeat
+      const size = await getImageSize(url);
+      const image = await renderImage({
+        src: url
+      }, {
+        x,
+        y,
+        width: Math.max(width, size.width),
+        height: Math.max(height, size.height)
+      });
+      const clipPath = $('clipPath', {
+        id: 'clip_' + uid()
+      }, defs, [$('rect', {
+        x,
+        y,
+        width,
+        height
+      })]);
+      image.setAttribute('clip-path', `url(#${clipPath.id})`);
+      g.appendChild(image);
+    } else {
+      var _parseGradient$, _parseGradient;
+      // TODO handle multiple gradients
+      const {
+        colorStops,
+        orientation,
+        type
+      } = (_parseGradient$ = (_parseGradient = parse(backgroundImage)) == null ? void 0 : _parseGradient[0]) != null ? _parseGradient$ : {};
+
+      // TODO handle repeating gradients type, SEE https://github.com/rafaelcaricio/gradient-parser?tab=readme-ov-file#ast
+      const gradient = $(kebabToCamel(type), {
+        id: 'gradient_' + uid(),
+        gradientUnits: 'objectBoundingBox',
+        // Allow specifying rotation center in %
+        gradientTransform: orientation ? (() => {
+          switch (orientation.type) {
+            case 'angular':
+              return `rotate(${270 + parseFloat(orientation.value)}, 0.5, 0.5)`;
+            case 'directional':
+              {
+                switch (orientation.value) {
+                  case 'top':
+                    return 'rotate(270, 0.5, 0.5)';
+                  case 'right':
+                    return null;
+                  case 'bottom':
+                    return 'rotate(90, 0.5, 0.5)';
+                  case 'left':
+                    return 'rotate(180, 0.5, 0.5)';
+                }
+              }
+          }
+        })() : 'rotate(90, 0.5, 0.5)'
+      }, defs);
+
+      // Add color stops
+      for (let index = 0; index < colorStops.length; index++) {
+        const colorStop = colorStops[index];
+        const stop = $('stop', {
+          offset: colorStop.length
+          // TODO handle colorStop.length.type other than '%'
+          ? +colorStop.length.value / 100 : index / (colorStops.length - 1),
+          'stop-color': `${colorStop.type}(${colorStop.value})`
+        });
+        gradient.appendChild(stop);
+      }
+      rect.setAttribute('fill', `url(#${gradient.id})`);
     }
-    rect.setAttribute('fill', `url(#${gradient.id})`);
   }
 
   // Render box shadow
@@ -344,27 +408,6 @@ var DivRenderer = (({
     rect.setAttribute('height', height - borders.top.width);
   }
   return g;
-});
-
-var image = (({
-  debug,
-  fonts
-}) => async (element, {
-  x,
-  y,
-  width,
-  height,
-  style
-}) => {
-  if (!width || !height) return;
-  if (!element.src) return;
-  return $('image', {
-    x,
-    y,
-    width,
-    height,
-    href: element.src
-  });
 });
 
 const SpanRenderer = ({
@@ -585,7 +628,7 @@ var RENDERERS = {
   MARK: SpanRenderer,
   SPAN: SpanRenderer,
   CANVAS: canvas,
-  IMG: image,
+  IMG: ImageRenderer,
   SVG: svg
 };
 
@@ -709,7 +752,6 @@ function index ({
 
         // Handle mix-blend-mode
         if (mixBlendMode !== 'normal') {
-          console.log(mixBlendMode);
           Context.current.style.mixBlendMode = mixBlendMode;
         }
 
