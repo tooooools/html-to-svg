@@ -128,7 +128,6 @@ export default function ({
 
         // Handle mix-blend-mode
         if (mixBlendMode !== 'normal') {
-          console.log(mixBlendMode)
           Context.current.style.mixBlendMode = mixBlendMode
         }
 

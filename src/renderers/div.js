@@ -1,6 +1,10 @@
+// TODO[refactor] split into smaller functions
+
 import $ from '../utils/dom-render-svg'
 import { parse as parseGradient } from 'gradient-parser'
 import { uid } from 'uid'
+
+import ImageRenderer from './image'
 
 const kebabToCamel = s => s.replace(/-./g, x => x[1].toUpperCase())
 
@@ -35,6 +39,14 @@ function parseBorders (s) {
   return borders
 }
 
+async function getImageSize (url) {
+  return new Promise(resolve => {
+    const image = new Image()
+    image.onload = () => resolve({ width: image.width, height: image.height })
+    image.src = url
+  })
+}
+
 export default ({
   debug,
   fonts
@@ -63,49 +75,69 @@ export default ({
 
   // Render background-image
   if (!isTransparent(backgroundImage)) {
-    // TODO handle multiple gradients
-    const {
-      colorStops,
-      orientation,
-      type
-    } = parseGradient(backgroundImage)?.[0] ?? {}
+    const url = (backgroundImage.match(/url\("?(.*?)"?\)/) ?? [])[1]
 
-    // TODO handle repeating gradients type, SEE https://github.com/rafaelcaricio/gradient-parser?tab=readme-ov-file#ast
-    const gradient = $(kebabToCamel(type), {
-      id: 'gradient_' + uid(),
-      gradientUnits: 'objectBoundingBox', // Allow specifying rotation center in %
-      gradientTransform: orientation
-        ? (() => {
-            switch (orientation.type) {
-              case 'angular': return `rotate(${270 + parseFloat(orientation.value)}, 0.5, 0.5)`
-              case 'directional': {
-                switch (orientation.value) {
-                  case 'top': return 'rotate(270, 0.5, 0.5)'
-                  case 'right': return null
-                  case 'bottom': return 'rotate(90, 0.5, 0.5)'
-                  case 'left': return 'rotate(180, 0.5, 0.5)'
+    // Render background-image
+    if (url) {
+      const backgroundSize = style.getPropertyValue('background-size')
+      const renderImage = ImageRenderer({ debug, fonts })
+      // TODO handle background-size
+      // TODO handle background-repeat
+      const size = await getImageSize(url)
+      const image = await renderImage({ src: url }, {
+        x,
+        y,
+        width: Math.max(width, size.width),
+        height: Math.max(height, size.height)
+      })
+      const clipPath = $('clipPath', { id: 'clip_' + uid() }, defs, [$('rect', { x, y, width, height })])
+      image.setAttribute('clip-path', `url(#${clipPath.id})`)
+      g.appendChild(image)
+    } else {
+      // TODO handle multiple gradients
+      const {
+        colorStops,
+        orientation,
+        type
+      } = parseGradient(backgroundImage)?.[0] ?? {}
+
+      // TODO handle repeating gradients type, SEE https://github.com/rafaelcaricio/gradient-parser?tab=readme-ov-file#ast
+      const gradient = $(kebabToCamel(type), {
+        id: 'gradient_' + uid(),
+        gradientUnits: 'objectBoundingBox', // Allow specifying rotation center in %
+        gradientTransform: orientation
+          ? (() => {
+              switch (orientation.type) {
+                case 'angular': return `rotate(${270 + parseFloat(orientation.value)}, 0.5, 0.5)`
+                case 'directional': {
+                  switch (orientation.value) {
+                    case 'top': return 'rotate(270, 0.5, 0.5)'
+                    case 'right': return null
+                    case 'bottom': return 'rotate(90, 0.5, 0.5)'
+                    case 'left': return 'rotate(180, 0.5, 0.5)'
+                  }
                 }
               }
-            }
-          })()
-        : 'rotate(90, 0.5, 0.5)'
-    }, defs)
+            })()
+          : 'rotate(90, 0.5, 0.5)'
+      }, defs)
 
-    // Add color stops
-    for (let index = 0; index < colorStops.length; index++) {
-      const colorStop = colorStops[index]
-      const stop = $('stop', {
-        offset: colorStop.length
-          // TODO handle colorStop.length.type other than '%'
-          ? +colorStop.length.value / 100
-          : index / (colorStops.length - 1),
-        'stop-color': `${colorStop.type}(${colorStop.value})`
-      })
+      // Add color stops
+      for (let index = 0; index < colorStops.length; index++) {
+        const colorStop = colorStops[index]
+        const stop = $('stop', {
+          offset: colorStop.length
+            // TODO handle colorStop.length.type other than '%'
+            ? +colorStop.length.value / 100
+            : index / (colorStops.length - 1),
+          'stop-color': `${colorStop.type}(${colorStop.value})`
+        })
 
-      gradient.appendChild(stop)
+        gradient.appendChild(stop)
+      }
+
+      rect.setAttribute('fill', `url(#${gradient.id})`)
     }
-
-    rect.setAttribute('fill', `url(#${gradient.id})`)
   }
 
   // Render box shadow
