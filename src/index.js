@@ -1,4 +1,4 @@
-import Opentype from 'opentype.js'
+import { load as loadOpentypeFont } from 'opentype.js'
 import { uid } from 'uid'
 
 import walk from './utils/dom-walk'
@@ -41,7 +41,7 @@ export default function ({
       for (const font of fonts) {
         if (font.opentype) continue
         font.opentype = await new Promise(resolve => {
-          Opentype.load(font.url, (error, font) => {
+          loadOpentypeFont(font.url, (error, font) => {
             if (error) throw error
             resolve(font)
           })
