@@ -1,4 +1,4 @@
-import Opentype from 'opentype.js';
+import { load } from 'opentype.js';
 import { uid } from 'uid';
 import * as Transform from 'transformation-matrix';
 import { parse } from 'gradient-parser';
@@ -1377,7 +1377,7 @@ function index (_temp) {
         var _temp2 = _forOf(fonts, function (font) {
           if (font.opentype) return;
           return Promise.resolve(new Promise(function (resolve) {
-            Opentype.load(font.url, function (error, font) {
+            load(font.url, function (error, font) {
               if (error) throw error;
               resolve(font);
             });

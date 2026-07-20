@@ -1,10 +1,8 @@
 (function (global, factory) {
   typeof exports === 'object' && typeof module !== 'undefined' ? module.exports = factory(require('opentype.js'), require('uid'), require('transformation-matrix'), require('gradient-parser')) :
   typeof define === 'function' && define.amd ? define(['opentype.js', 'uid', 'transformation-matrix', 'gradient-parser'], factory) :
-  (global = global || self, global.HtmlToSvg = factory(global.Opentype, global.uid, global.transformationMatrix, global.gradientParser));
-})(this, (function (Opentype, uid, Transform, gradientParser) {
-  function _interopDefaultLegacy (e) { return e && typeof e === 'object' && 'default' in e ? e : { 'default': e }; }
-
+  (global = global || self, global.HtmlToSvg = factory(global.opentype_js, global.uid, global.transformationMatrix, global.gradientParser));
+})(this, (function (opentype_js, uid, Transform, gradientParser) {
   function _interopNamespace(e) {
     if (e && e.__esModule) return e;
     var n = Object.create(null);
@@ -23,7 +21,6 @@
     return n;
   }
 
-  var Opentype__default = /*#__PURE__*/_interopDefaultLegacy(Opentype);
   var Transform__namespace = /*#__PURE__*/_interopNamespace(Transform);
 
   function _extends() {
@@ -1400,7 +1397,7 @@
           var _temp2 = _forOf(fonts, function (font) {
             if (font.opentype) return;
             return Promise.resolve(new Promise(function (resolve) {
-              Opentype__default["default"].load(font.url, function (error, font) {
+              opentype_js.load(font.url, function (error, font) {
                 if (error) throw error;
                 resolve(font);
               });

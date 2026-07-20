@@ -1,9 +1,7 @@
-var Opentype = require('opentype.js');
+var opentype_js = require('opentype.js');
 var uid = require('uid');
 var Transform = require('transformation-matrix');
 var gradientParser = require('gradient-parser');
-
-function _interopDefaultLegacy (e) { return e && typeof e === 'object' && 'default' in e ? e : { 'default': e }; }
 
 function _interopNamespace(e) {
   if (e && e.__esModule) return e;
@@ -23,7 +21,6 @@ function _interopNamespace(e) {
   return n;
 }
 
-var Opentype__default = /*#__PURE__*/_interopDefaultLegacy(Opentype);
 var Transform__namespace = /*#__PURE__*/_interopNamespace(Transform);
 
 function _extends() {
@@ -1400,7 +1397,7 @@ function index (_temp) {
         var _temp2 = _forOf(fonts, function (font) {
           if (font.opentype) return;
           return Promise.resolve(new Promise(function (resolve) {
-            Opentype__default["default"].load(font.url, function (error, font) {
+            opentype_js.load(font.url, function (error, font) {
               if (error) throw error;
               resolve(font);
             });
