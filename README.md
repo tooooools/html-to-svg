@@ -19,11 +19,16 @@ The renderer pipeline is structured such as every type of HTML element can have 
 Render HTML `<div>` with its background color and its border-radius.  
 Also acts as the **fallback renderer for all HTML elements**.
 
+#### [`renderers/hr`](src/renderers/hr.js)
+
+Render HTML `<hr>` with its background and computed border styles.
+
 #### [`renderers/text`](src/renderers/text.js)
 
 Render [text node](https://developer.mozilla.org/en-US/docs/Web/API/Text), using computed style and loaded fonts (**will throw an error if no matching fonts declaration is found**).
 
 All fonts are outlined using [Opentype.js](https://github.com/opentypejs/opentype.js).
+Underline, overline, and line-through decorations retain their CSS color, style, thickness, and underline offset.
 
 #### [`renderers/image`](src/renderers/image.js)
 
@@ -37,11 +42,7 @@ Render a HTMLCanvas element as a base64 png in a SVG `<image>` element.
 
 Render inline `<svg>` element as a base64 in a SVG `<image>` element.
 
-### Roadmap
-
-- Support for HTML `<hr>` element
-- Support for CSS `text-decoration` property
-- Support for CSS `transform: skew()` property
+Nested 2D transforms declared through the CSS `transform` property are emitted as complete affine matrices, preserving translate, scale, rotate, and skew operations around their computed transform origin.
 
 ### Limitations
 
@@ -50,6 +51,9 @@ This project primarily aims at rendering printable SVG files, in which case font
 [Opentype.js](https://github.com/opentypejs/opentype.js) does not support (yet) loading local fonts: as a result, **every font used in in the rendering process should be explicitly declared in the render constructor** (see [Usage](#usage) below).
 
 At the time of writing, an an experimental [Local Font Access API](https://developer.chrome.com/en/articles/local-fonts/) is being tested, which could circumvent this issue. Contributions on implementing this API, or using native opt-in (or fallback) SVG `<text>` will be really appreciated.
+
+The root element's own transform, independent `translate`, `rotate`, and `scale`
+properties, and true 3D or perspective transforms are not currently rendered.
 
 ## Installation
 

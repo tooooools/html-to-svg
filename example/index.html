@@ -81,6 +81,16 @@
       <div style='transform: scale(0.5); transform-origin: 0 0;'>Hello world</div>
     </section>
 
+    <section data-label='skew' spellcheck='false'>
+      <div style='transform: skew(20deg, -5deg); transform-origin: left top; background: salmon; width: 12rem; padding: 1rem;'>Hello world</div>
+    </section>
+
+    <section data-label='horizontal rule'>
+      <hr>
+      <hr style='border: 0; height: 4px; background: red;'>
+      <hr style='border: 3px double blue;'>
+    </section>
+
     <section data-label='styled box' spellcheck='false'>
       <div style='padding:2rem; border: 5px solid red; background: salmon; margin-bottom: 1rem'>Hello world</div>
       <div style='padding:2rem; border-radius: 30px; border: 20px solid red; background: salmon; margin-bottom: 1rem'>Hello world</div>
@@ -121,6 +131,13 @@
 
     <section data-label='css letter-spacing' contentEditable spellcheck='false'>
       <div style='letter-spacing: 0.5em'>Hello world</div>
+    </section>
+
+    <section data-label='text decoration' contentEditable spellcheck='false'>
+      <div style='text-decoration: underline 2px wavy red; text-underline-offset: 3px;'>Wavy underline</div>
+      <div style='text-decoration: overline double blue;'>Double overline</div>
+      <div style='text-decoration: line-through 3px dashed green;'>Dashed line-through</div>
+      <div><span style='text-decoration: underline red;'>Parent <span style='color: blue; font-size: 2em; text-decoration: line-through wavy;'>and child</span> tail</span></div>
     </section>
 
     <section data-label='image' contentEditable spellcheck='false'>

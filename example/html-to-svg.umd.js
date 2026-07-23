@@ -14465,32 +14465,6 @@
       });
   }
 
-  /**
-   * Synchronously load the font from a URL or file.
-   * When done, returns the font object or throws an error.
-   * @alias opentype.loadSync
-   * @param  {string} url - The URL of the font to load.
-   * @param  {Object} opt - opt.lowMemory
-   * @return {opentype.Font}
-   */
-  function loadSync(url, opt) {
-      var fs = require('fs');
-      var buffer = fs.readFileSync(url);
-      return parseBuffer(nodeBufferToArrayBuffer(buffer), opt);
-  }
-
-  var opentype = /*#__PURE__*/Object.freeze({
-  	__proto__: null,
-  	Font: Font,
-  	Glyph: Glyph,
-  	Path: Path,
-  	BoundingBox: BoundingBox,
-  	_parse: parse$1,
-  	parse: parseBuffer,
-  	load: load,
-  	loadSync: loadSync
-  });
-
   var IDX=256, HEX=[], SIZE=256, BUFFER;
   while (IDX--) HEX[IDX] = (IDX + 256).toString(16).substring(1);
 
@@ -14678,6 +14652,344 @@
     return fragments;
   }
 
+  var DECORATION_LINES = new Set(['underline', 'overline', 'line-through']);
+  function getTextDecoration (style) {
+    if (style.getPropertyValue('display') === 'contents') return;
+    var lines = style.getPropertyValue('text-decoration-line').split(/\s+/).filter(function (line) {
+      return DECORATION_LINES.has(line);
+    });
+    if (!lines.length) return;
+    return {
+      lines: lines,
+      color: style.getPropertyValue('text-decoration-color'),
+      style: style.getPropertyValue('text-decoration-style'),
+      thickness: style.getPropertyValue('text-decoration-thickness'),
+      underlineOffset: style.getPropertyValue('text-underline-offset')
+    };
+  }
+
+  /* global document, window */
+
+  var ATOMIC_DISPLAYS = new Set(['inline-block', 'inline-flex', 'inline-grid', 'inline-table', 'inline flow-root']);
+  var REPLACED_ELEMENTS = new Set(['CANVAS', 'IFRAME', 'IMG', 'SVG', 'VIDEO']);
+  var toRect = function toRect(rect) {
+    return {
+      x: rect.x,
+      y: rect.y,
+      width: rect.width,
+      height: rect.height,
+      right: rect.x + rect.width,
+      bottom: rect.y + rect.height
+    };
+  };
+  var overlapsVertically = function overlapsVertically(a, b) {
+    return Math.min(a.bottom, b.bottom) > Math.max(a.y, b.y);
+  };
+  function mergeRects(rects, expectedHeight) {
+    var lines = [];
+    var _loop2 = function _loop2() {
+      var rect = _step.value;
+      var line = lines.find(function (candidate) {
+        return candidate.some(function (other) {
+          return overlapsVertically(rect, other);
+        });
+      });
+      if (!line) {
+        line = [];
+        lines.push(line);
+      }
+      line.push(rect);
+    };
+    for (var _iterator = _createForOfIteratorHelperLoose(rects), _step; !(_step = _iterator()).done;) {
+      _loop2();
+    }
+    var merged = [];
+    var _loop = function _loop() {
+      var line = _lines[_i];
+      var sorted = line.sort(function (a, b) {
+        return a.x - b.x;
+      });
+      var run = [];
+      var right = -Infinity;
+      var flush = function flush() {
+        if (!run.length) return;
+        var anchor = run.reduce(function (best, rect) {
+          return Math.abs(rect.height - expectedHeight) < Math.abs(best.height - expectedHeight) ? rect : best;
+        });
+        merged.push({
+          x: run[0].x,
+          y: anchor.y,
+          width: right - run[0].x,
+          height: anchor.height,
+          right: right,
+          bottom: anchor.bottom
+        });
+        run = [];
+        right = -Infinity;
+      };
+      for (var _iterator2 = _createForOfIteratorHelperLoose(sorted), _step2; !(_step2 = _iterator2()).done;) {
+        var rect = _step2.value;
+        if (run.length && rect.x > right + 1) flush();
+        run.push(rect);
+        right = Math.max(right, rect.right);
+      }
+      flush();
+    };
+    for (var _i = 0, _lines = lines; _i < _lines.length; _i++) {
+      _loop();
+    }
+    return merged;
+  }
+  function isAtomic(element, style) {
+    var display = style.getPropertyValue('display');
+    var position = style.getPropertyValue('position');
+    var _float = style.getPropertyValue('float');
+    return ATOMIC_DISPLAYS.has(display) || REPLACED_ELEMENTS.has(element.tagName) || position === 'absolute' || position === 'fixed' || _float && _float !== 'none';
+  }
+  function getBlockers(element) {
+    if (!element.querySelectorAll) return [];
+    var blockers = [];
+    for (var _iterator3 = _createForOfIteratorHelperLoose(element.querySelectorAll('*')), _step3; !(_step3 = _iterator3()).done;) {
+      var child = _step3.value;
+      var style = window.getComputedStyle(child);
+      if (!isAtomic(child, style)) continue;
+      blockers.push.apply(blockers, Array.from(child.getClientRects(), toRect));
+    }
+    return blockers;
+  }
+  function subtractBlockers(rects, blockers) {
+    var result = rects;
+    for (var _iterator4 = _createForOfIteratorHelperLoose(blockers), _step4; !(_step4 = _iterator4()).done;) {
+      var blocker = _step4.value;
+      var next = [];
+      for (var _iterator5 = _createForOfIteratorHelperLoose(result), _step5; !(_step5 = _iterator5()).done;) {
+        var rect = _step5.value;
+        if (!overlapsVertically(rect, blocker)) {
+          next.push(rect);
+          continue;
+        }
+        var start = Math.max(rect.x, blocker.x);
+        var end = Math.min(rect.right, blocker.right);
+        if (start >= end) {
+          next.push(rect);
+          continue;
+        }
+        if (start > rect.x) {
+          next.push(_extends({}, rect, {
+            width: start - rect.x,
+            right: start
+          }));
+        }
+        if (end < rect.right) {
+          next.push(_extends({}, rect, {
+            x: end,
+            width: rect.right - end
+          }));
+        }
+      }
+      result = next;
+    }
+    return result;
+  }
+  function getTextDecorationRects (element, style, font, fontSize) {
+    var unitsPerEm = font.unitsPerEm,
+      tables = font.tables;
+    var expectedHeight = (tables.hhea.ascender - tables.hhea.descender) / unitsPerEm * fontSize;
+    var display = style.getPropertyValue('display');
+    var rects;
+    if (display === 'inline') {
+      rects = Array.from(element.getClientRects(), toRect);
+    } else {
+      var range = document.createRange();
+      range.selectNodeContents(element);
+      rects = mergeRects(Array.from(range.getClientRects(), toRect).filter(function (rect) {
+        return rect.width && rect.height;
+      }), expectedHeight);
+    }
+    return subtractBlockers(rects, getBlockers(element));
+  }
+
+  function $ (name, props, parent, children) {
+    if (props === void 0) {
+      props = {};
+    }
+    if (children === void 0) {
+      children = [];
+    }
+    var NS = 'http://www.w3.org/2000/svg';
+    var element = document.createElementNS(NS, name);
+    if (name === 'svg') element.setAttributeNS('http://www.w3.org/2000/xmlns/', 'xmlns', NS);
+    for (var key in props) {
+      if (props[key] === null || props[key] === undefined) continue;
+      element.setAttribute(key, props[key]);
+    }
+    if (parent) parent.appendChild(element);
+    for (var _iterator = _createForOfIteratorHelperLoose((_children = children) != null ? _children : []), _step; !(_step = _iterator()).done;) {
+      var _children;
+      var child = _step.value;
+      element.appendChild(child);
+    }
+    return element;
+  }
+
+  var round = function round(value) {
+    return Math.round(value * 1000) / 1000;
+  };
+  function cssLength(value, fontSize, fallback) {
+    if (!value || value === 'auto' || value === 'from-font') return fallback;
+    var number = parseFloat(value);
+    if (isNaN(number)) return fallback;
+    if (value.endsWith('%')) return fontSize * number / 100;
+    return number;
+  }
+  function strokeProps$1(style, thickness) {
+    switch (style) {
+      case 'dotted':
+        return {
+          'stroke-dasharray': "0 " + round(thickness * 2),
+          'stroke-linecap': 'round'
+        };
+      case 'dashed':
+        return {
+          'stroke-dasharray': round(thickness * 3) + " " + round(thickness * 2)
+        };
+      default:
+        return {};
+    }
+  }
+  function renderWave(g, _ref) {
+    var x = _ref.x,
+      y = _ref.y,
+      width = _ref.width,
+      thickness = _ref.thickness,
+      color = _ref.color,
+      fontSize = _ref.fontSize;
+    var amplitude = Math.max(thickness, fontSize / 16);
+    var halfWave = amplitude * 2;
+    var cursor = x;
+    var direction = -1;
+    var path = "M " + round(x) + " " + round(y);
+    while (cursor < x + width) {
+      var end = Math.min(cursor + halfWave, x + width);
+      path += " Q " + round((cursor + end) / 2) + " " + round(y + direction * amplitude) + " " + round(end) + " " + round(y);
+      cursor = end;
+      direction *= -1;
+    }
+    $('path', {
+      d: path,
+      fill: 'none',
+      stroke: color,
+      'stroke-width': thickness,
+      'stroke-linecap': 'round',
+      'stroke-linejoin': 'round'
+    }, g);
+  }
+  function renderLine(g, _ref2) {
+    var x = _ref2.x,
+      y = _ref2.y,
+      width = _ref2.width,
+      thickness = _ref2.thickness,
+      color = _ref2.color,
+      style = _ref2.style,
+      fontSize = _ref2.fontSize,
+      line = _ref2.line;
+    if (style === 'wavy') {
+      renderWave(g, {
+        x: x,
+        y: y,
+        width: width,
+        thickness: thickness,
+        color: color,
+        fontSize: fontSize
+      });
+      return;
+    }
+    var positions = style === 'double' ? line === 'underline' ? [y, y + thickness * 2] : line === 'overline' ? [y, y - thickness * 2] : [y - thickness, y + thickness] : [y];
+    for (var _i = 0, _positions = positions; _i < _positions.length; _i++) {
+      var position = _positions[_i];
+      $('line', _extends({
+        x1: x,
+        x2: x + width,
+        y1: position,
+        y2: position,
+        stroke: color,
+        'stroke-width': thickness
+      }, strokeProps$1(style, thickness)), g);
+    }
+  }
+  function renderTextDecoration (_ref3) {
+    var _tables$post, _tables$os, _tables$hhea$ascender, _tables$hhea, _post$underlineThickn, _post$underlinePositi, _os2$yStrikeoutPositi;
+    var x = _ref3.x,
+      width = _ref3.width,
+      baseline = _ref3.baseline,
+      fontSize = _ref3.fontSize,
+      font = _ref3.font,
+      color = _ref3.color,
+      decorations = _ref3.decorations;
+    if (!width || !(decorations != null && decorations.length)) return;
+    var unitsPerEm = font.unitsPerEm,
+      tables = font.tables;
+    var post = (_tables$post = tables.post) != null ? _tables$post : {};
+    var os2 = (_tables$os = tables.os2) != null ? _tables$os : {};
+    var ascender = (_tables$hhea$ascender = (_tables$hhea = tables.hhea) == null ? void 0 : _tables$hhea.ascender) != null ? _tables$hhea$ascender : font.ascender;
+    var fontThickness = Math.max(0.5, Math.abs((_post$underlineThickn = post.underlineThickness) != null ? _post$underlineThickn : unitsPerEm / 16) / unitsPerEm * fontSize);
+    var underline = baseline - ((_post$underlinePositi = post.underlinePosition) != null ? _post$underlinePositi : -unitsPerEm / 10) / unitsPerEm * fontSize;
+    var overline = baseline - ascender / unitsPerEm * fontSize + fontThickness / 2;
+    var strikeThrough = baseline - ((_os2$yStrikeoutPositi = os2.yStrikeoutPosition) != null ? _os2$yStrikeoutPositi : unitsPerEm * 0.3) / unitsPerEm * fontSize;
+    var g = $('g', {
+      "class": 'text-decoration'
+    });
+    for (var _iterator = _createForOfIteratorHelperLoose(decorations), _step; !(_step = _iterator()).done;) {
+      var decoration = _step.value;
+      var thickness = Math.max(0.5, cssLength(decoration.thickness, fontSize, fontThickness));
+      var decorationColor = !decoration.color || decoration.color === 'currentcolor' ? color : decoration.color;
+      var decorationStyle = decoration.style || 'solid';
+      var underlineOffset = cssLength(decoration.underlineOffset, fontSize, 0);
+      for (var _iterator2 = _createForOfIteratorHelperLoose(decoration.lines), _step2; !(_step2 = _iterator2()).done;) {
+        var line = _step2.value;
+        var y = line === 'underline' ? underline + underlineOffset : line === 'overline' ? overline : line === 'line-through' ? strikeThrough : null;
+        if (y === null) continue;
+        renderLine(g, {
+          x: x,
+          y: y,
+          width: width,
+          thickness: thickness,
+          color: decorationColor,
+          style: decorationStyle,
+          fontSize: fontSize,
+          line: line
+        });
+      }
+    }
+    return g.children.length ? g : undefined;
+  }
+
+  function getFontBaseline (font, fontSize, y) {
+    var unitsPerEm = font.unitsPerEm;
+    var _font$tables$hhea = font.tables.hhea,
+      ascender = _font$tables$hhea.ascender,
+      descender = _font$tables$hhea.descender;
+    var lineBox = (ascender - descender) / unitsPerEm;
+    var leading = fontSize * lineBox - Math.abs(descender / unitsPerEm) * fontSize;
+    return y + leading;
+  }
+
+  var matchFont = function matchFont(style) {
+    return function (_temp) {
+      var _style$getPropertyVal, _style$getPropertyVal2, _style$getPropertyVal3;
+      var _ref = _temp === void 0 ? {} : _temp,
+        family = _ref.family,
+        _ref$style = _ref.style,
+        fontStyle = _ref$style === void 0 ? 'normal' : _ref$style,
+        _ref$weight = _ref.weight,
+        weight = _ref$weight === void 0 ? '400' : _ref$weight;
+      return family === ((_style$getPropertyVal = style.getPropertyValue('font-family')) != null ? _style$getPropertyVal : '').replace(/['"]/g, '') && fontStyle === ((_style$getPropertyVal2 = style.getPropertyValue('font-style')) != null ? _style$getPropertyVal2 : 'normal') && weight === ((_style$getPropertyVal3 = style.getPropertyValue('font-weight')) != null ? _style$getPropertyVal3 : '400');
+    };
+  };
+  var findFont = (function (fonts, style) {
+    return fonts.find(matchFont(style));
+  });
+
   /**
    * @ignore
    * @type {RegExp}
@@ -14787,36 +15099,6 @@
    */
   function compose (...matrices) {
     return transform(...matrices)
-  }
-
-  const { cos, sin, PI } = Math;
-  /**
-   * Calculate a rotation matrix
-   * @param angle {number} Angle in radians
-   * @param [cx] {number} If (cx,cy) are supplied the rotate is about this point
-   * @param [cy] {number} If (cx,cy) are supplied the rotate is about this point
-   * @returns {Matrix} Affine Matrix
-   */
-  function rotate (angle, cx, cy) {
-    const cosAngle = cos(angle);
-    const sinAngle = sin(angle);
-    const rotationMatrix = {
-      a: cosAngle,
-      c: -sinAngle,
-      e: 0,
-      b: sinAngle,
-      d: cosAngle,
-      f: 0
-    };
-    if (isUndefined(cx) || isUndefined(cy)) {
-      return rotationMatrix
-    }
-
-    return transform([
-      translate(cx, cy),
-      rotationMatrix,
-      translate(-cx, -cy)
-    ])
   }
 
   /**
@@ -15098,20 +15380,39 @@
     }
   }
 
+  var MATRIX_EPSILON = 1e-10;
+  var isZero = function isZero(value) {
+    return Math.abs(value) < MATRIX_EPSILON;
+  };
+  var isOne = function isOne(value) {
+    return Math.abs(value - 1) < MATRIX_EPSILON;
+  };
+  function as2DMatrix(value) {
+    if (!value.startsWith('matrix3d(')) return value;
+    var values = value.slice('matrix3d('.length, -1).split(',').map(Number);
+    if (values.length !== 16 || values.some(function (number) {
+      return !Number.isFinite(number);
+    })) throw new Error("Invalid CSS transform: " + value);
+    var compatible = isZero(values[2]) && isZero(values[3]) && isZero(values[6]) && isZero(values[7]) && isZero(values[8]) && isZero(values[9]) && isOne(values[10]) && isZero(values[11]) && isZero(values[14]) && isOne(values[15]);
+    if (!compatible) {
+      throw new Error("Unsupported 3D CSS transform: " + value);
+    }
+    return "matrix(" + [values[0], values[1], values[4], values[5], values[12], values[13]].join(',') + ")";
+  }
   function parseTransform (value) {
     if (!value || value === 'none' || value === '') return null;
-    var matrix = fromString(value);
+    var matrix = fromString(as2DMatrix(value));
     var _Transform$decomposeT = decomposeTSR(matrix),
       translate$1 = _Transform$decomposeT.translate,
-      scale$1 = _Transform$decomposeT.scale,
+      scale = _Transform$decomposeT.scale,
       rotation = _Transform$decomposeT.rotation;
     return {
       raw: value,
+      matrix: matrix,
       translate: translate$1,
-      scale: scale$1,
+      scale: scale,
       rotation: rotation,
       toSVGTransform: function toSVGTransform(_temp) {
-        var _translate$tx, _translate$ty, _scale$sx, _ref2, _scale$sy, _rotation$angle;
         var _ref = _temp === void 0 ? {} : _temp,
           _ref$x = _ref.x,
           x = _ref$x === void 0 ? 0 : _ref$x,
@@ -15121,7 +15422,7 @@
           origin = _ref$origin === void 0 ? [0, 0] : _ref$origin;
         var cx = x + origin[0];
         var cy = y + origin[1];
-        return toString(compose(translate((_translate$tx = translate$1 == null ? void 0 : translate$1.tx) != null ? _translate$tx : 0, (_translate$ty = translate$1 == null ? void 0 : translate$1.ty) != null ? _translate$ty : 0), scale((_scale$sx = scale$1 == null ? void 0 : scale$1.sx) != null ? _scale$sx : 1, (_ref2 = (_scale$sy = scale$1 == null ? void 0 : scale$1.sy) != null ? _scale$sy : scale$1 == null ? void 0 : scale$1.sx) != null ? _ref2 : 1, cx, cy), rotate((_rotation$angle = rotation == null ? void 0 : rotation.angle) != null ? _rotation$angle : 0, cx, cy)));
+        return toString(compose(translate(cx, cy), matrix, translate(-cx, -cy)));
       }
     };
   }
@@ -15129,29 +15430,6 @@
   var lastOf = (function (arr) {
     return arr[arr.length - 1];
   });
-
-  function $ (name, props, parent, children) {
-    if (props === void 0) {
-      props = {};
-    }
-    if (children === void 0) {
-      children = [];
-    }
-    var NS = 'http://www.w3.org/2000/svg';
-    var element = document.createElementNS(NS, name);
-    if (name === 'svg') element.setAttributeNS('http://www.w3.org/2000/xmlns/', 'xmlns', NS);
-    for (var key in props) {
-      if (props[key] === null || props[key] === undefined) continue;
-      element.setAttribute(key, props[key]);
-    }
-    if (parent) parent.appendChild(element);
-    for (var _iterator = _createForOfIteratorHelperLoose((_children = children) != null ? _children : []), _step; !(_step = _iterator()).done;) {
-      var _children;
-      var child = _step.value;
-      element.appendChild(child);
-    }
-    return element;
-  }
 
   var canvas = (function (_ref) {
     return function (element, _ref2) {
@@ -15732,7 +16010,7 @@
       return x[1].toUpperCase();
     });
   };
-  function isTransparent(color) {
+  function isTransparent$1(color) {
     if (!color || color === 'none' || color === 'transparent') return true;
     if (color.startsWith('rgba')) {
       var rgba = color.match(/[\d.]+/g);
@@ -15750,7 +16028,7 @@
       var style = s.getPropertyValue("border-" + dir + "-style");
 
       // Skip invisible
-      if (isTransparent(color)) continue;
+      if (isTransparent$1(color)) continue;
       if (!width || isNaN(width)) continue;
       if (style === 'none' || style === 'hidden') continue;
       (_borders = borders) != null ? _borders : borders = {};
@@ -15889,7 +16167,7 @@
         var borders = parseBorders(style);
 
         // Skip visually empty blocks
-        if (isTransparent(backgroundColor) && isTransparent(backgroundImage) && !borders) return Promise.resolve();
+        if (isTransparent$1(backgroundColor) && isTransparent$1(backgroundImage) && !borders) return Promise.resolve();
 
         // Render initial rect
         var g = $('g');
@@ -15904,7 +16182,7 @@
 
         // Render background-image
         var _temp2 = function () {
-          if (!isTransparent(backgroundImage)) {
+          if (!isTransparent$1(backgroundImage)) {
             var _backgroundImage$matc;
             var url = ((_backgroundImage$matc = backgroundImage.match(/url\("?(.*?)"?\)/)) != null ? _backgroundImage$matc : [])[1];
 
@@ -15991,6 +16269,150 @@
           }
         }();
         return Promise.resolve(_temp2 && _temp2.then ? _temp2.then(_temp3) : _temp3(_temp2));
+      } catch (e) {
+        return Promise.reject(e);
+      }
+    };
+  });
+
+  function isTransparent(color) {
+    var _color$match;
+    if (!color || color === 'none' || color === 'transparent') return true;
+    if (color.startsWith('rgba')) return ((_color$match = color.match(/[\d.]+/g)) == null ? void 0 : _color$match[3]) === '0';
+    return false;
+  }
+  function readBorder(style, side) {
+    var color = style.getPropertyValue("border-" + side + "-color");
+    var width = parseFloat(style.getPropertyValue("border-" + side + "-width"));
+    var lineStyle = style.getPropertyValue("border-" + side + "-style");
+    if (!width || isNaN(width)) return;
+    if (isTransparent(color)) return;
+    if (lineStyle === 'none' || lineStyle === 'hidden') return;
+    return {
+      color: color,
+      width: width,
+      style: lineStyle
+    };
+  }
+  function shade(color, amount) {
+    var values = color.match(/[\d.]+/g);
+    if (!values || values.length < 3) return color;
+    var channels = values.slice(0, 3).map(function (value) {
+      var channel = parseFloat(value);
+      var target = amount < 0 ? 0 : 255;
+      return Math.round(channel + (target - channel) * Math.abs(amount));
+    });
+    return values.length > 3 ? "rgba(" + channels.join(', ') + ", " + values[3] + ")" : "rgb(" + channels.join(', ') + ")";
+  }
+  function strokeProps(_ref) {
+    var style = _ref.style,
+      width = _ref.width;
+    switch (style) {
+      case 'dotted':
+        return {
+          'stroke-dasharray': "0 " + width * 2,
+          'stroke-linecap': 'round'
+        };
+      case 'dashed':
+        return {
+          'stroke-dasharray': width * 3 + " " + width * 2
+        };
+      default:
+        return {};
+    }
+  }
+  function renderBorder(g, side, border, _ref2) {
+    var x = _ref2.x,
+      y = _ref2.y,
+      width = _ref2.width,
+      height = _ref2.height;
+    var horizontal = side === 'top' || side === 'bottom';
+    var startSide = side === 'top' || side === 'left';
+    var direction = startSide ? 1 : -1;
+    var edge = horizontal ? side === 'top' ? y : y + height : side === 'left' ? x : x + width;
+    var dark = shade(border.color, -0.25);
+    var light = shade(border.color, 0.25);
+    var addLine = function addLine(position, strokeWidth, stroke) {
+      if (stroke === void 0) {
+        stroke = border.color;
+      }
+      return $('line', _extends({
+        x1: horizontal ? x : position,
+        x2: horizontal ? x + width : position,
+        y1: horizontal ? position : y,
+        y2: horizontal ? position : y + height,
+        stroke: stroke,
+        'stroke-width': strokeWidth
+      }, strokeProps({
+        style: border.style,
+        width: strokeWidth
+      })), g);
+    };
+    if (border.style === 'double' && border.width >= 3) {
+      var strokeWidth = border.width / 3;
+      addLine(edge + direction * strokeWidth / 2, strokeWidth);
+      addLine(edge + direction * (border.width - strokeWidth / 2), strokeWidth);
+      return;
+    }
+    if (border.style === 'groove' || border.style === 'ridge') {
+      var _strokeWidth = border.width / 2;
+      var groove = border.style === 'groove';
+      var outer = groove === startSide ? dark : light;
+      var inner = groove === startSide ? light : dark;
+      addLine(edge + direction * _strokeWidth / 2, _strokeWidth, outer);
+      addLine(edge + direction * (border.width - _strokeWidth / 2), _strokeWidth, inner);
+      return;
+    }
+    var color = border.style === 'inset' ? startSide ? dark : light : border.style === 'outset' ? startSide ? light : dark : border.color;
+    addLine(edge + direction * border.width / 2, border.width, color);
+  }
+  var hr = (function (options) {
+    var renderDiv = DivRenderer(options);
+    return function (element, props) {
+      try {
+        var x = props.x,
+          y = props.y,
+          width = props.width,
+          height = props.height,
+          style = props.style;
+        if (!width || !height) return Promise.resolve();
+        var backgroundImage = style.getPropertyValue('background-image');
+        var boxShadow = style.getPropertyValue('box-shadow');
+        var borderRadius = parseFloat(style.getPropertyValue('border-radius'));
+
+        // Preserve the generic renderer's richer box effects when an <hr> uses them.
+        if (backgroundImage && backgroundImage !== 'none' || boxShadow && boxShadow !== 'none' || borderRadius > 0) return Promise.resolve(renderDiv(element, props));
+        var backgroundColor = style.getPropertyValue('background-color');
+        var borders = Object.fromEntries(['top', 'right', 'bottom', 'left'].map(function (side) {
+          return [side, readBorder(style, side)];
+        }).filter(function (_ref3) {
+          var border = _ref3[1];
+          return border;
+        }));
+        var g = $('g', {
+          "class": 'hr'
+        });
+        if (!isTransparent(backgroundColor)) {
+          $('rect', {
+            x: x,
+            y: y,
+            width: width,
+            height: height,
+            fill: backgroundColor
+          }, g);
+        }
+        for (var _i = 0, _Object$entries = Object.entries(borders); _i < _Object$entries.length; _i++) {
+          var _Object$entries$_i = _Object$entries[_i],
+            side = _Object$entries$_i[0],
+            border = _Object$entries$_i[1];
+          renderBorder(g, side, border, {
+            x: x,
+            y: y,
+            width: width,
+            height: height
+          });
+        }
+        return Promise.resolve(g.children.length ? g : undefined);
       } catch (e) {
         return Promise.reject(e);
       }
@@ -16439,36 +16861,24 @@
     };
   });
 
-  var matchFont = function matchFont(s) {
-    return function (_temp) {
-      var _s$getPropertyValue, _s$getPropertyValue2, _s$getPropertyValue3;
-      var _ref = _temp === void 0 ? {} : _temp,
-        family = _ref.family,
-        _ref$style = _ref.style,
-        style = _ref$style === void 0 ? 'normal' : _ref$style,
-        _ref$weight = _ref.weight,
-        weight = _ref$weight === void 0 ? '400' : _ref$weight;
-      return family === ((_s$getPropertyValue = s.getPropertyValue('font-family')) != null ? _s$getPropertyValue : '').replace(/['"]/g, '') && style === ((_s$getPropertyValue2 = s.getPropertyValue('font-style')) != null ? _s$getPropertyValue2 : 'normal') && weight === ((_s$getPropertyValue3 = s.getPropertyValue('font-weight')) != null ? _s$getPropertyValue3 : '400');
-    };
-  };
-  var text = (function (_ref2) {
-    var debug = _ref2.debug,
-      fonts = _ref2.fonts;
-    return function (string, _ref3, _ref4) {
-      var x = _ref3.x,
-        y = _ref3.y,
-        width = _ref3.width,
-        height = _ref3.height,
-        style = _ref3.style;
-      var _ref4$splitText = _ref4.splitText,
-        splitText = _ref4$splitText === void 0 ? false : _ref4$splitText;
+  var text = (function (_ref) {
+    var debug = _ref.debug,
+      fonts = _ref.fonts;
+    return function (string, _ref2, _ref3) {
+      var x = _ref2.x,
+        y = _ref2.y,
+        width = _ref2.width,
+        height = _ref2.height,
+        style = _ref2.style;
+      var _ref3$splitText = _ref3.splitText,
+        splitText = _ref3$splitText === void 0 ? false : _ref3$splitText;
       try {
-        var line = function line(title, v, _temp2) {
-          var _ref5 = _temp2 === void 0 ? {} : _temp2,
-            _ref5$orientation = _ref5.orientation,
-            orientation = _ref5$orientation === void 0 ? 'horizontal' : _ref5$orientation,
-            _ref5$stroke = _ref5.stroke,
-            stroke = _ref5$stroke === void 0 ? 'black' : _ref5$stroke;
+        var line = function line(title, v, _temp) {
+          var _ref4 = _temp === void 0 ? {} : _temp,
+            _ref4$orientation = _ref4.orientation,
+            orientation = _ref4$orientation === void 0 ? 'horizontal' : _ref4$orientation,
+            _ref4$stroke = _ref4.stroke,
+            stroke = _ref4$stroke === void 0 ? 'black' : _ref4$stroke;
           return debug && $('line', {
             title: title,
             'data-value': v,
@@ -16486,21 +16896,16 @@
         });
 
         // Find font
-        var font = fonts.find(matchFont(style));
+        var font = findFont(fonts, style);
         if (!font) throw new Error("Cannot find font '" + style.getPropertyValue('font-family') + " " + style.getPropertyValue('font-style') + " " + style.getPropertyValue('font-weight') + "'");
-
-        // Extract font metrics
-        var unitsPerEm = font.opentype.unitsPerEm;
-        var ascender = font.opentype.tables.hhea.ascender;
-        var descender = font.opentype.tables.hhea.descender;
 
         // Extract CSS props
         var letterSpacing = style.getPropertyValue('letter-spacing');
         var fontSize = parseFloat(style.getPropertyValue('font-size'));
 
         // Compute metrics
-        var lineBox = (ascender - descender) / unitsPerEm;
-        var leading = fontSize * lineBox - Math.abs(descender / unitsPerEm) * fontSize;
+        var baseline = getFontBaseline(font.opentype, fontSize, y);
+        var leading = baseline - y;
 
         // Render various metrics for debug
         line('start', 0, {
@@ -16523,7 +16928,7 @@
             if (!c.match(/\s/)) {
               // Do not render spaces
               $('path', {
-                d: font.opentype.getPath(c, x, y + leading, fontSize).toPathData(3),
+                d: font.opentype.getPath(c, x, baseline, fontSize).toPathData(3),
                 fill: style.getPropertyValue('color')
               }, g);
             }
@@ -16532,7 +16937,7 @@
         } else {
           // Render string
           $('path', {
-            d: font.opentype.getPath(string, x, y + leading, fontSize, {
+            d: font.opentype.getPath(string, x, baseline, fontSize, {
               features: {
                 // TODO extract from CSS props
                 liga: true,
@@ -16555,6 +16960,7 @@
     text: text,
     svg: svg,
     DIV: DivRenderer,
+    HR: hr,
     MARK: SpanRenderer,
     SPAN: SpanRenderer,
     CANVAS: canvas,
@@ -16727,14 +17133,46 @@
     }
     return result;
   }
+  function renderTextDecorationLayer(_ref) {
+    var element = _ref.element,
+      style = _ref.style,
+      font = _ref.font,
+      viewBox = _ref.viewBox,
+      decoration = _ref.decoration,
+      lines = _ref.lines;
+    var selectedLines = decoration.lines.filter(function (line) {
+      return lines.includes(line);
+    });
+    if (!selectedLines.length) return;
+    var fontSize = parseFloat(style.getPropertyValue('font-size'));
+    var g = $('g', {
+      "class": 'text-decoration-layer'
+    });
+    for (var _iterator = _createForOfIteratorHelperLoose(getTextDecorationRects(element, style, font, fontSize)), _step; !(_step = _iterator()).done;) {
+      var rect = _step.value;
+      var rendered = renderTextDecoration({
+        x: rect.x - viewBox.x,
+        width: rect.width,
+        baseline: getFontBaseline(font, fontSize, rect.y - viewBox.y),
+        fontSize: fontSize,
+        font: font,
+        color: style.getPropertyValue('color'),
+        decorations: [_extends({}, decoration, {
+          lines: selectedLines
+        })]
+      });
+      if (rendered) g.appendChild(rendered);
+    }
+    return g.children.length ? g : undefined;
+  }
   function index (_temp) {
-    var _ref = _temp === void 0 ? {} : _temp,
-      _ref$debug = _ref.debug,
-      debug = _ref$debug === void 0 ? false : _ref$debug,
-      _ref$ignore = _ref.ignore,
-      ignore = _ref$ignore === void 0 ? '' : _ref$ignore,
-      _ref$fonts = _ref.fonts,
-      fonts = _ref$fonts === void 0 ? [] : _ref$fonts;
+    var _ref2 = _temp === void 0 ? {} : _temp,
+      _ref2$debug = _ref2.debug,
+      debug = _ref2$debug === void 0 ? false : _ref2$debug,
+      _ref2$ignore = _ref2.ignore,
+      ignore = _ref2$ignore === void 0 ? '' : _ref2$ignore,
+      _ref2$fonts = _ref2.fonts,
+      fonts = _ref2$fonts === void 0 ? [] : _ref2$fonts;
     var cache = new Map();
     var detransformed = new Map();
 
@@ -16750,10 +17188,10 @@
 
     // Restore all removed transformation if any
     var cleanup = function cleanup() {
-      for (var _iterator = _createForOfIteratorHelperLoose(detransformed), _step; !(_step = _iterator()).done;) {
-        var _step$value = _step.value,
-          element = _step$value[0],
-          transform = _step$value[1];
+      for (var _iterator2 = _createForOfIteratorHelperLoose(detransformed), _step2; !(_step2 = _iterator2()).done;) {
+        var _step2$value = _step2.value,
+          element = _step2$value[0],
+          transform = _step2$value[1];
         element.style.transform = transform;
         detransformed["delete"](element);
       }
@@ -16769,7 +17207,7 @@
           var _temp2 = _forOf(fonts, function (font) {
             if (font.opentype) return;
             return Promise.resolve(new Promise(function (resolve) {
-              opentype.load(font.url, function (error, font) {
+              load(font.url, function (error, font) {
                 if (error) throw error;
                 resolve(font);
               });
@@ -16786,8 +17224,8 @@
       destroy: function destroy() {
         cache.clear();
         cleanup();
-        for (var _iterator2 = _createForOfIteratorHelperLoose(fonts), _step2; !(_step2 = _iterator2()).done;) {
-          var font = _step2.value;
+        for (var _iterator3 = _createForOfIteratorHelperLoose(fonts), _step3; !(_step3 = _iterator3()).done;) {
+          var font = _step3.value;
           delete font.opentype;
         }
       },
@@ -16832,6 +17270,7 @@
               }
             };
           }();
+          var foregroundDecorations = [];
 
           // Render every children
           return Promise.resolve(walk(root, function (element, depth, index) {
@@ -16847,13 +17286,16 @@
               var mixBlendMode = style.getPropertyValue('mix-blend-mode');
               var clipPath = style.getPropertyValue('clip-path');
               var overflow = style.getPropertyValue('overflow');
+              var decoration = getTextDecoration(style);
 
               // Temporarily remove transformation to simplify coordinates calc
               if (matrix) {
                 // WARNING this will cause issues with concurent renderings:
                 // <renderer>#cleanup is called before to ensure purity
                 detransformed.set(element, element.style.transform);
-                element.style.transform = 'none';
+                // Keep a non-none identity transform so positioned descendants retain
+                // the transformed element as their containing block.
+                element.style.transform = 'matrix(1, 0, 0, 1, 0, 0)';
               }
               var _element$getBoundingC = element.getBoundingClientRect(),
                 x = _element$getBoundingC.x,
@@ -16862,7 +17304,8 @@
                 height = _element$getBoundingC.height;
 
               // Create a new context
-              if (+opacity !== 1 || matrix || mixBlendMode !== 'normal' || overflow === 'hidden' || clipPath !== 'none') Context.push();
+              if (+opacity !== 1 || matrix || mixBlendMode !== 'normal' || overflow === 'hidden' || clipPath !== 'none' || decoration) Context.push();
+              var elementContext = Context.current;
 
               // Handle opacity
               if (+opacity !== 1) {
@@ -16915,55 +17358,113 @@
                 viewBox: viewBox,
                 defs: defs
               }, options)).then(function (rendered) {
-                function _temp9() {
-                  var _getTextFragments;
-                  function _temp7() {
-                    if (g.children.length) Context.current.appendChild(g);
-                  }
-                  if (rendered) Context.current.appendChild(rendered);
-
-                  // Render text nodes inside the element
-                  var g = $('g', {
-                    "class": 'text'
-                  });
-                  var _temp6 = _forOf((_getTextFragments = getTextFragments(element)) != null ? _getTextFragments : [], function (_ref2) {
-                    var rect = _ref2.rect,
-                      fragment = _ref2.fragment;
-                    var _temp5 = _catch(function () {
-                      return Promise.resolve(renderers.text(fragment.textContent.trimEnd(), {
-                        x: rect.x - viewBox.x,
-                        y: rect.y - viewBox.y,
-                        width: rect.width,
-                        height: rect.height,
-                        style: style
-                      }, options)).then(function (text) {
-                        function _temp4() {
-                          if (text) g.appendChild(text);
-                        }
-                        var _temp3 = function () {
-                          if (transform) return Promise.resolve(transform(element, text)).then(function (_transform2) {
-                            text = _transform2;
-                          });
-                        }();
-                        return _temp3 && _temp3.then ? _temp3.then(_temp4) : _temp4(_temp3);
-                      });
-                    }, function (error) {
-                      // TODO[improve] error handling
-                      console.warn(new Error("Rendering failed for the following text: '" + fragment.textContent + "'", {
-                        cause: error
-                      }));
-                      console.warn(error);
+                function _temp17() {
+                  function _temp15() {
+                    var _getTextFragments;
+                    function _temp13() {
+                      if (g.children.length) elementContext.appendChild(g);
+                    }
+                    // Render text nodes inside the element
+                    var g = $('g', {
+                      "class": 'text'
                     });
-                    if (_temp5 && _temp5.then) return _temp5.then(function () {});
-                  });
-                  return _temp6 && _temp6.then ? _temp6.then(_temp7) : _temp7(_temp6);
+                    var textFragments = (_getTextFragments = getTextFragments(element)) != null ? _getTextFragments : [];
+                    var _temp12 = _forOf(textFragments, function (_ref3) {
+                      var rect = _ref3.rect,
+                        fragment = _ref3.fragment;
+                      var _temp11 = _catch(function () {
+                        return Promise.resolve(renderers.text(fragment.textContent.trimEnd(), {
+                          x: rect.x - viewBox.x,
+                          y: rect.y - viewBox.y,
+                          width: rect.width,
+                          height: rect.height,
+                          style: style
+                        }, options)).then(function (text) {
+                          function _temp10() {
+                            if (text) g.appendChild(text);
+                          }
+                          var _temp9 = function () {
+                            if (transform) return Promise.resolve(transform(element, text)).then(function (_transform4) {
+                              text = _transform4;
+                            });
+                          }();
+                          return _temp9 && _temp9.then ? _temp9.then(_temp10) : _temp10(_temp9);
+                        });
+                      }, function (error) {
+                        // TODO[improve] error handling
+                        console.warn(new Error("Rendering failed for the following text: '" + fragment.textContent + "'", {
+                          cause: error
+                        }));
+                        console.warn(error);
+                      });
+                      if (_temp11 && _temp11.then) return _temp11.then(function () {});
+                    });
+                    return _temp12 && _temp12.then ? _temp12.then(_temp13) : _temp13(_temp12);
+                  }
+                  if (rendered) elementContext.appendChild(rendered);
+                  var _temp14 = function () {
+                    if (decoration) {
+                      var _findFont;
+                      var font = (_findFont = findFont(fonts, style)) == null ? void 0 : _findFont.opentype;
+                      var _temp8 = function () {
+                        if (font) {
+                          var _temp7 = function _temp7() {
+                            if (_below) elementContext.appendChild(_below);
+                            if (_above) {
+                              foregroundDecorations.push({
+                                context: elementContext,
+                                rendered: _above
+                              });
+                            }
+                          };
+                          var _below = renderTextDecorationLayer({
+                            element: element,
+                            style: style,
+                            font: font,
+                            viewBox: viewBox,
+                            decoration: decoration,
+                            lines: ['underline', 'overline']
+                          });
+                          var _above = renderTextDecorationLayer({
+                            element: element,
+                            style: style,
+                            font: font,
+                            viewBox: viewBox,
+                            decoration: decoration,
+                            lines: ['line-through']
+                          });
+                          var _temp6 = function () {
+                            if (transform) {
+                              var _temp5 = function _temp5() {
+                                var _temp3 = function () {
+                                  if (_above) return Promise.resolve(transform(element, _above)).then(function (_transform3) {
+                                    _above = _transform3;
+                                  });
+                                }();
+                                if (_temp3 && _temp3.then) return _temp3.then(function () {});
+                              };
+                              var _temp4 = function () {
+                                if (_below) return Promise.resolve(transform(element, _below)).then(function (_transform2) {
+                                  _below = _transform2;
+                                });
+                              }();
+                              return _temp4 && _temp4.then ? _temp4.then(_temp5) : _temp5(_temp4);
+                            }
+                          }();
+                          return _temp6 && _temp6.then ? _temp6.then(_temp7) : _temp7(_temp6);
+                        }
+                      }();
+                      if (_temp8 && _temp8.then) return _temp8.then(function () {});
+                    }
+                  }();
+                  return _temp14 && _temp14.then ? _temp14.then(_temp15) : _temp15(_temp14);
                 }
-                var _temp8 = function () {
+                var _temp16 = function () {
                   if (transform) return Promise.resolve(transform(element, rendered)).then(function (_transform) {
                     rendered = _transform;
                   });
                 }();
-                return _temp8 && _temp8.then ? _temp8.then(_temp9) : _temp9(_temp8);
+                return _temp16 && _temp16.then ? _temp16.then(_temp17) : _temp17(_temp16);
               });
             } catch (e) {
               return Promise.reject(e);
@@ -16976,6 +17477,12 @@
               return a.zIndex - b.zIndex;
             }
           })).then(function () {
+            for (var _i2 = 0, _foregroundDecoration = foregroundDecorations; _i2 < _foregroundDecoration.length; _i2++) {
+              var _foregroundDecoration2 = _foregroundDecoration[_i2],
+                context = _foregroundDecoration2.context,
+                rendered = _foregroundDecoration2.rendered;
+              context.appendChild(rendered);
+            }
             cleanup();
             return svg;
           });
