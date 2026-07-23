@@ -4,6 +4,7 @@ import { uid } from 'uid'
 import walk from './utils/dom-walk'
 import getZIndex from './utils/dom-get-zindex'
 import getTextFragments from './utils/dom-get-text-fragments'
+import loadLocalFonts from './utils/local-fonts'
 import parseTransform from './utils/parse-transform'
 import lastOf from './utils/array-last'
 
@@ -17,11 +18,13 @@ export default function ({
 } = {}) {
   const cache = new Map()
   const detransformed = new Map()
+  const fontFaces = [...fonts]
+  const declaredFontCount = fontFaces.length
 
   // Init curried renderers
   const renderers = {}
   for (const k in RENDERERS) {
-    renderers[k] = RENDERERS[k]({ debug, fonts, cache })
+    renderers[k] = RENDERERS[k]({ debug, fonts: fontFaces, cache })
   }
 
   // Restore all removed transformation if any
@@ -36,9 +39,49 @@ export default function ({
     get cache () { return cache },
     cleanup,
 
+    // Parse FontData objects returned by the Local Font Access API
+    addLocalFonts: async function (fontData) {
+      const identities = new Set(fontFaces.map(font =>
+        font.postscriptName ??
+        `${font.family}\0${font.style ?? 'normal'}\0${font.weight ?? '400'}`
+      ))
+      const pendingIdentities = new Set()
+      const candidates = []
+
+      for (const data of Array.from(fontData ?? [])) {
+        const identity = data?.postscriptName
+        if (
+          identity &&
+          (identities.has(identity) || pendingIdentities.has(identity))
+        ) continue
+
+        if (identity) pendingIdentities.add(identity)
+        candidates.push(data)
+      }
+
+      const loaded = await loadLocalFonts(candidates)
+      const liveIdentities = new Set(fontFaces.map(font =>
+        font.postscriptName ??
+        `${font.family}\0${font.style ?? 'normal'}\0${font.weight ?? '400'}`
+      ))
+      const added = []
+
+      for (const font of loaded) {
+        const identity = font.postscriptName ??
+          `${font.family}\0${font.style}\0${font.weight}`
+        if (liveIdentities.has(identity)) continue
+
+        liveIdentities.add(identity)
+        added.push(font)
+      }
+
+      fontFaces.push(...added)
+      return added
+    },
+
     // Preload all fonts before resolving
     preload: async function () {
-      for (const font of fonts) {
+      for (const font of fontFaces) {
         if (font.opentype) continue
         font.opentype = await new Promise(resolve => {
           loadOpentypeFont(font.url, (error, font) => {
@@ -53,7 +96,8 @@ export default function ({
     destroy: function () {
       cache.clear()
       cleanup()
-      for (const font of fonts) delete font.opentype
+      for (const font of fontFaces) delete font.opentype
+      fontFaces.length = declaredFontCount
     },
 
     // Render the HTML container as a shadow SVG
