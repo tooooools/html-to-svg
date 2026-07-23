@@ -13,6 +13,7 @@
   "unpkg": "./dist/html-to-svg.umd.js",
   "scripts": {
     "build": "microbundle --compress false",
+    "test": "node test",
     "build:watch": "microbundle watch",
     "example": "npm run example:build -- -w & light-server -s example -p 1337 -w 'example, example/**'",
     "example:build": "microbundle -o example -f umd --external all --compress false",
@@ -39,6 +40,8 @@
     "uid": "^2.0.2"
   },
   "devDependencies": {
+    "@babel/core": "^7.12.10",
+    "@babel/preset-env": "^7.12.11",
     "eslint": "^8.45.0",
     "eslint-config-standard": "^17.1.0",
     "eslint-plugin-html": "^7.1.0",

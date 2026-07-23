@@ -4,11 +4,47 @@ import { uid } from 'uid'
 import walk from './utils/dom-walk'
 import getZIndex from './utils/dom-get-zindex'
 import getTextFragments from './utils/dom-get-text-fragments'
+import getTextDecoration from './utils/dom-get-text-decoration'
+import getTextDecorationRects from './utils/dom-get-text-decoration-rects'
+import renderTextDecoration from './utils/dom-render-text-decoration'
+import getFontBaseline from './utils/font-baseline'
+import findFont from './utils/font-match'
 import parseTransform from './utils/parse-transform'
 import lastOf from './utils/array-last'
 
 import $ from './utils/dom-render-svg'
 import * as RENDERERS from './renderers'
+
+function renderTextDecorationLayer ({
+  element,
+  style,
+  font,
+  viewBox,
+  decoration,
+  lines
+}) {
+  const selectedLines = decoration.lines.filter(line => lines.includes(line))
+  if (!selectedLines.length) return
+
+  const fontSize = parseFloat(style.getPropertyValue('font-size'))
+  const g = $('g', { class: 'text-decoration-layer' })
+
+  for (const rect of getTextDecorationRects(element, style, font, fontSize)) {
+    const rendered = renderTextDecoration({
+      x: rect.x - viewBox.x,
+      width: rect.width,
+      baseline: getFontBaseline(font, fontSize, rect.y - viewBox.y),
+      fontSize,
+      font,
+      color: style.getPropertyValue('color'),
+      decorations: [{ ...decoration, lines: selectedLines }]
+    })
+
+    if (rendered) g.appendChild(rendered)
+  }
+
+  return g.children.length ? g : undefined
+}
 
 export default function ({
   debug = false,
@@ -89,6 +125,8 @@ export default function ({
         }
       })()
 
+      const foregroundDecorations = []
+
       // Render every children
       await walk(root, async (element, depth, index) => {
         if (ignore && element !== root && element.matches(ignore)) return
@@ -101,13 +139,16 @@ export default function ({
         const mixBlendMode = style.getPropertyValue('mix-blend-mode')
         const clipPath = style.getPropertyValue('clip-path')
         const overflow = style.getPropertyValue('overflow')
+        const decoration = getTextDecoration(style)
 
         // Temporarily remove transformation to simplify coordinates calc
         if (matrix) {
           // WARNING this will cause issues with concurent renderings:
           // <renderer>#cleanup is called before to ensure purity
           detransformed.set(element, element.style.transform)
-          element.style.transform = 'none'
+          // Keep a non-none identity transform so positioned descendants retain
+          // the transformed element as their containing block.
+          element.style.transform = 'matrix(1, 0, 0, 1, 0, 0)'
         }
 
         const { x, y, width, height } = element.getBoundingClientRect()
@@ -118,8 +159,11 @@ export default function ({
           matrix ||
           mixBlendMode !== 'normal' ||
           overflow === 'hidden' ||
-          clipPath !== 'none'
+          clipPath !== 'none' ||
+          decoration
         ) Context.push()
+
+        const elementContext = Context.current
 
         // Handle opacity
         if (+opacity !== 1) {
@@ -175,11 +219,49 @@ export default function ({
         }, options)
 
         if (transform) rendered = await transform(element, rendered)
-        if (rendered) Context.current.appendChild(rendered)
+        if (rendered) elementContext.appendChild(rendered)
+
+        if (decoration) {
+          const font = findFont(fonts, style)?.opentype
+
+          if (font) {
+            let below = renderTextDecorationLayer({
+              element,
+              style,
+              font,
+              viewBox,
+              decoration,
+              lines: ['underline', 'overline']
+            })
+            let above = renderTextDecorationLayer({
+              element,
+              style,
+              font,
+              viewBox,
+              decoration,
+              lines: ['line-through']
+            })
+
+            if (transform) {
+              if (below) below = await transform(element, below)
+              if (above) above = await transform(element, above)
+            }
+
+            if (below) elementContext.appendChild(below)
+            if (above) {
+              foregroundDecorations.push({
+                context: elementContext,
+                rendered: above
+              })
+            }
+          }
+        }
 
         // Render text nodes inside the element
         const g = $('g', { class: 'text' })
-        for (const { rect, fragment } of getTextFragments(element) ?? []) {
+        const textFragments = getTextFragments(element) ?? []
+
+        for (const { rect, fragment } of textFragments) {
           try {
             let text = await renderers.text(fragment.textContent.trimEnd(), {
               x: rect.x - viewBox.x,
@@ -198,7 +280,7 @@ export default function ({
           }
         }
 
-        if (g.children.length) Context.current.appendChild(g)
+        if (g.children.length) elementContext.appendChild(g)
       }, {
         sort: (a, b) => {
           a.zIndex ??= getZIndex(a)
@@ -206,6 +288,10 @@ export default function ({
           return a.zIndex - b.zIndex
         }
       })
+
+      for (const { context, rendered } of foregroundDecorations) {
+        context.appendChild(rendered)
+      }
 
       cleanup()
       return svg

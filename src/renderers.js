@@ -1,5 +1,6 @@
 import canvas from './renderers/canvas'
 import div from './renderers/div'
+import hr from './renderers/hr'
 import image from './renderers/image'
 import span from './renderers/span'
 import svg from './renderers/svg'
@@ -12,6 +13,7 @@ export {
 
   // Match HTMLElement.tagName casing
   div as DIV,
+  hr as HR,
   span as MARK,
   span as SPAN,
   canvas as CANVAS,

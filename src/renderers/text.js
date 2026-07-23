@@ -1,13 +1,14 @@
-// TODO text-decoration
-
 import $ from '../utils/dom-render-svg'
+import getFontBaseline from '../utils/font-baseline'
+import findFont from '../utils/font-match'
 
-const matchFont = s => ({ family, style = 'normal', weight = '400' } = {}) =>
-  family === (s.getPropertyValue('font-family') ?? '').replace(/['"]/g, '') &&
-    style === (s.getPropertyValue('font-style') ?? 'normal') &&
-    weight === (s.getPropertyValue('font-weight') ?? '400')
-
-export default ({ debug, fonts }) => async (string, { x, y, width, height, style }, {
+export default ({ debug, fonts }) => async (string, {
+  x,
+  y,
+  width,
+  height,
+  style
+}, {
   splitText = false
 }) => {
   if (!string) return
@@ -15,21 +16,16 @@ export default ({ debug, fonts }) => async (string, { x, y, width, height, style
   const g = $('g', { class: 'text-fragment' })
 
   // Find font
-  const font = fonts.find(matchFont(style))
+  const font = findFont(fonts, style)
   if (!font) throw new Error(`Cannot find font '${style.getPropertyValue('font-family')} ${style.getPropertyValue('font-style')} ${style.getPropertyValue('font-weight')}'`)
-
-  // Extract font metrics
-  const { unitsPerEm } = font.opentype
-  const ascender = font.opentype.tables.hhea.ascender
-  const descender = font.opentype.tables.hhea.descender
 
   // Extract CSS props
   const letterSpacing = style.getPropertyValue('letter-spacing')
   const fontSize = parseFloat(style.getPropertyValue('font-size'))
 
   // Compute metrics
-  const lineBox = (ascender - descender) / unitsPerEm
-  const leading = (fontSize * lineBox) - Math.abs(descender / unitsPerEm) * fontSize
+  const baseline = getFontBaseline(font.opentype, fontSize, y)
+  const leading = baseline - y
 
   // Render various metrics for debug
   line('start', 0, { orientation: 'vertical', stroke: 'red' })
@@ -43,7 +39,7 @@ export default ({ debug, fonts }) => async (string, { x, y, width, height, style
     for (const c of string) {
       if (!c.match(/\s/)) { // Do not render spaces
         $('path', {
-          d: font.opentype.getPath(c, x, y + leading, fontSize).toPathData(3),
+          d: font.opentype.getPath(c, x, baseline, fontSize).toPathData(3),
           fill: style.getPropertyValue('color')
         }, g)
       }
@@ -53,7 +49,7 @@ export default ({ debug, fonts }) => async (string, { x, y, width, height, style
   } else {
     // Render string
     $('path', {
-      d: font.opentype.getPath(string, x, y + leading, fontSize, {
+      d: font.opentype.getPath(string, x, baseline, fontSize, {
         features: {
           // TODO extract from CSS props
           liga: true,
