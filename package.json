@@ -16,6 +16,7 @@
     "build:watch": "microbundle watch",
     "example": "npm run example:build -- -w & light-server -s example -p 1337 -w 'example, example/**'",
     "example:build": "microbundle -o example -f umd --external all --compress false",
+    "test:local-fonts": "npm run build && node test/local-fonts.js",
     "preversion": "npm run build && git add dist example --force",
     "postversion": "git push && git push --tags && ghp example -f && npm publish --access public"
   },

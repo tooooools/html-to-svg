@@ -47,9 +47,7 @@ Render inline `<svg>` element as a base64 in a SVG `<image>` element.
 
 This project primarily aims at rendering printable SVG files, in which case font rendering is far more robust when outlining every texts.
 
-[Opentype.js](https://github.com/opentypejs/opentype.js) does not support (yet) loading local fonts: as a result, **every font used in in the rendering process should be explicitly declared in the render constructor** (see [Usage](#usage) below).
-
-At the time of writing, an an experimental [Local Font Access API](https://developer.chrome.com/en/articles/local-fonts/) is being tested, which could circumvent this issue. Contributions on implementing this API, or using native opt-in (or fallback) SVG `<text>` will be really appreciated.
+Fonts can be loaded from URLs declared in the render constructor (see [Usage](#usage) below), or from browser-provided `FontData` objects in environments that support the [Local Font Access API](https://developer.chrome.com/docs/capabilities/web-apis/local-fonts).
 
 ## Installation
 
@@ -92,6 +90,38 @@ download(svg.outerHTML)
 
 renderer.destroy()
 ```
+
+### Local fonts
+
+Local font enumeration must be initiated by the application from a user
+gesture. Pass the resulting `FontData` objects to the renderer:
+
+```js
+button.addEventListener('click', async () => {
+  if (!('queryLocalFonts' in window)) return
+
+  const localFonts = await window.queryLocalFonts({
+    postscriptNames: ['ArialMT']
+  })
+
+  await renderer.addLocalFonts(localFonts)
+})
+```
+
+`addLocalFonts()` parses every unique supplied font before changing the
+renderer and returns the newly added font descriptors. Repeated PostScript
+names are ignored. Constructor-declared URL fonts keep priority over local
+fonts. Requesting specific PostScript names also avoids parsing fonts the
+application does not need.
+
+The browser API requires a secure context, transient user activation, and the
+`local-fonts` permission. Applications should feature-detect it and retain
+declared URL fonts as a fallback.
+
+Font matching uses each face's OpenType weight and normalized italic or oblique
+metadata. Variable-font axes and `font-stretch` matching are not currently
+modeled. Faces in single-font or TTC/OTC collection containers are supported
+when their outline format can be parsed by the pinned OpenType.js version.
 
 ## Contributing
 
