@@ -1,4 +1,4 @@
-import { load as loadOpentypeFont } from 'opentype.js'
+import * as Opentype from 'opentype.js'
 import { uid } from 'uid'
 
 import walk from './utils/dom-walk'
@@ -9,6 +9,8 @@ import lastOf from './utils/array-last'
 
 import $ from './utils/dom-render-svg'
 import * as RENDERERS from './renderers'
+
+const parseOpentypeFont = Opentype.parse ?? Opentype.default?.parse
 
 export default function ({
   debug = false,
@@ -40,12 +42,14 @@ export default function ({
     preload: async function () {
       for (const font of fonts) {
         if (font.opentype) continue
-        font.opentype = await new Promise(resolve => {
-          loadOpentypeFont(font.url, (error, font) => {
-            if (error) throw error
-            resolve(font)
-          })
-        })
+        const response = await fetch(font.url)
+        if (!response.ok) {
+          throw new Error(
+            `Failed to load font '${font.url}': ` +
+            `${response.status} ${response.statusText}`
+          )
+        }
+        font.opentype = parseOpentypeFont(await response.arrayBuffer())
       }
     },
 
